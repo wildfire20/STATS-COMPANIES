@@ -31,7 +31,7 @@ export default function ServicesManagement() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "photography",
+    category: "Printing",
     startingPrice: "",
     features: "",
     image: "",
@@ -101,7 +101,7 @@ export default function ServicesManagement() {
     setFormData({
       name: "",
       description: "",
-      category: "photography",
+      category: "Printing",
       startingPrice: "",
       features: "",
       image: "",
