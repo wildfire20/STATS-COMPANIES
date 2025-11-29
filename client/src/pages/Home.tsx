@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Printer, Camera, Video, Megaphone, ArrowRight, Star, CheckCircle } from "lucide-react";
 import type { Service, Testimonial, PortfolioItem, Promotion } from "@shared/schema";
+import logoImage from "@assets/states company logo_1764435536382.jpg";
 
 const services = [
   {
@@ -64,6 +65,12 @@ export default function Home() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
         <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
           <div className="max-w-3xl mx-auto text-center space-y-6">
+            <img 
+              src={logoImage} 
+              alt="STATS Companies" 
+              className="h-24 md:h-32 w-auto mx-auto mb-4"
+              data-testid="img-hero-logo"
+            />
             <Badge variant="secondary" className="mb-4" data-testid="badge-tagline">
               You dream it, We make it
             </Badge>

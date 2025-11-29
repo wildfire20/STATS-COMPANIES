@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Target, Eye, Heart, Award } from "lucide-react";
 import type { TeamMember } from "@shared/schema";
+import logoImage from "@assets/states company logo_1764435536382.jpg";
 
 export default function About() {
   const { data: teamMembers, isLoading } = useQuery<TeamMember[]>({
@@ -15,6 +16,12 @@ export default function About() {
       <section className="py-20 hero-gradient text-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
+            <img 
+              src={logoImage} 
+              alt="STATS Companies" 
+              className="h-20 w-auto mx-auto mb-6"
+              data-testid="img-about-logo"
+            />
             <Badge variant="secondary" className="mb-4">About Us</Badge>
             <h1 className="text-4xl md:text-5xl font-bold mb-6" data-testid="text-about-title">
               Our Story
