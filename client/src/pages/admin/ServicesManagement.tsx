@@ -44,11 +44,7 @@ export default function ServicesManagement() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("/api/admin/services", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("POST", "/api/admin/services", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] });
@@ -64,11 +60,7 @@ export default function ServicesManagement() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return apiRequest(`/api/admin/services/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("PUT", `/api/admin/services/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] });
@@ -85,7 +77,7 @@ export default function ServicesManagement() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/admin/services/${id}`, { method: "DELETE" });
+      return apiRequest("DELETE", `/api/admin/services/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/services"] });

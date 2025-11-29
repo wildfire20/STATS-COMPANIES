@@ -35,11 +35,7 @@ export default function PromotionsManagement() {
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      return apiRequest("/api/admin/promotions", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("POST", "/api/admin/promotions", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/promotions"] });
@@ -55,11 +51,7 @@ export default function PromotionsManagement() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return apiRequest(`/api/admin/promotions/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("PUT", `/api/admin/promotions/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/promotions"] });
@@ -76,7 +68,7 @@ export default function PromotionsManagement() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/admin/promotions/${id}`, { method: "DELETE" });
+      return apiRequest("DELETE", `/api/admin/promotions/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/promotions"] });
