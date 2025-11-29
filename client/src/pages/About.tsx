@@ -141,10 +141,19 @@ export default function About() {
             ) : teamMembers?.map((member) => (
               <Card key={member.id} className="text-center" data-testid={`card-team-${member.id}`}>
                 <CardHeader>
-                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <span className="text-3xl font-bold text-primary">
-                      {member.name.split(' ').map(n => n[0]).join('')}
-                    </span>
+                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                    {member.image ? (
+                      <img 
+                        src={member.image} 
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        data-testid={`img-team-${member.id}`}
+                      />
+                    ) : (
+                      <span className="text-3xl font-bold text-primary">
+                        {member.name.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    )}
                   </div>
                   <CardTitle>{member.name}</CardTitle>
                   <CardDescription className="font-medium text-primary">
