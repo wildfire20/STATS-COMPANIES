@@ -15,7 +15,9 @@ import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  createLocalUser(email: string, password: string, firstName: string, lastName: string, role?: string): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   
@@ -90,6 +92,11 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -100,6 +107,20 @@ export class DatabaseStorage implements IStorage {
           ...userData,
           updatedAt: new Date(),
         },
+      })
+      .returning();
+    return user;
+  }
+
+  async createLocalUser(email: string, password: string, firstName: string, lastName: string, role: string = "customer"): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        email,
+        password,
+        firstName,
+        lastName,
+        role,
       })
       .returning();
     return user;

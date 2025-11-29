@@ -131,9 +131,13 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if ((req.session as any)?.localAuth && (req.session as any)?.userId) {
+    return next();
+  }
+
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated() || !user?.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
@@ -160,9 +164,22 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
 };
 
 export const isAdmin: RequestHandler = async (req, res, next) => {
+  if ((req.session as any)?.localAuth && (req.session as any)?.userId) {
+    try {
+      const dbUser = await storage.getUser((req.session as any).userId);
+      if (!dbUser || dbUser.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
+      }
+      return next();
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+      return;
+    }
+  }
+
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.claims?.sub) {
+  if (!req.isAuthenticated() || !user?.claims?.sub) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

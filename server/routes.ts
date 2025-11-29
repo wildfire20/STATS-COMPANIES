@@ -16,15 +16,114 @@ import {
   insertTeamMemberSchema
 } from "@shared/schema";
 import { z } from "zod";
+import crypto from "crypto";
+
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+async function seedAdminUser() {
+  const existingAdmin = await storage.getUserByEmail("admin@statscompanies.co.za");
+  if (!existingAdmin) {
+    await storage.createLocalUser(
+      "admin@statscompanies.co.za",
+      hashPassword("Admin@123"),
+      "Admin",
+      "User",
+      "admin"
+    );
+    console.log("Example admin account created: admin@statscompanies.co.za / Admin@123");
+  }
+}
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {
   await setupAuth(app);
+  
+  await seedAdminUser();
 
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.post('/api/auth/local/login', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user || !user.password) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      const hashedPassword = hashPassword(password);
+      if (user.password !== hashedPassword) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      (req.session as any).userId = user.id;
+      (req.session as any).localAuth = true;
+      
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post('/api/auth/local/register', async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+      
+      if (!email || !password || !firstName || !lastName) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
+      const hashedPassword = hashPassword(password);
+      const user = await storage.createLocalUser(email, hashedPassword, firstName, lastName);
+      
+      (req.session as any).userId = user.id;
+      (req.session as any).localAuth = true;
+
+      const { password: _, ...userWithoutPassword } = user;
+      res.status(201).json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  app.post('/api/auth/local/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get('/api/auth/user', async (req: any, res) => {
+    try {
+      if ((req.session as any)?.localAuth && (req.session as any)?.userId) {
+        const user = await storage.getUser((req.session as any).userId);
+        if (user) {
+          const { password: _, ...userWithoutPassword } = user;
+          return res.json(userWithoutPassword);
+        }
+      }
+      
+      if (req.user?.claims?.sub) {
+        const userId = req.user.claims.sub;
+        const user = await storage.getUser(userId);
+        return res.json(user);
+      }
+      
+      return res.status(401).json({ message: "Not authenticated" });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });

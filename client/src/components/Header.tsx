@@ -26,17 +26,22 @@ const navigation = [
 ];
 
 export function Header() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { user, isLoading, isAuthenticated, isAdmin } = useAuth();
 
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    setLocation("/login");
   };
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/local/logout", { method: "POST" });
+      window.location.href = "/";
+    } catch (error) {
+      window.location.href = "/api/logout";
+    }
   };
 
   const getInitials = (name: string) => {

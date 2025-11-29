@@ -13,6 +13,7 @@ import Portfolio from "@/pages/Portfolio";
 import Bookings from "@/pages/Bookings";
 import Quote from "@/pages/Quote";
 import Promotions from "@/pages/Promotions";
+import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
 import AdminDashboard from "@/pages/admin/Dashboard";
@@ -71,6 +72,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Switch>
+          <Route path="/login" component={Login} />
           <Route path="/admin/:rest*">
             {() => <Router />}
           </Route>
