@@ -4,9 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Camera, Video, Palette, Megaphone, Printer, Sparkles, X, Eye } from "lucide-react";
+import { Camera, Video, Palette, Megaphone, Printer, Sparkles, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { PortfolioItem } from "@shared/schema";
 
@@ -80,126 +79,130 @@ export default function Portfolio() {
       {/* Portfolio Grid */}
       <section className="py-16 md:py-24 bg-background">
         <div className="container mx-auto px-4">
-          <Tabs defaultValue={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
-            <motion.div 
-              className="flex justify-center mb-12 overflow-x-auto pb-2"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <TabsList className="inline-flex h-auto p-1.5 bg-muted/50 rounded-2xl">
-                {categories.map((category) => (
-                  <TabsTrigger
-                    key={category.id}
-                    value={category.id}
-                    className="whitespace-nowrap rounded-xl py-3 px-5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all font-medium"
-                    data-testid={`tab-${category.id}`}
-                  >
-                    {category.icon && <category.icon className="h-4 w-4 mr-2 hidden sm:block" />}
-                    <span className="text-xs sm:text-sm">{category.name}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </motion.div>
+          {/* Category Filter */}
+          <motion.div 
+            className="flex justify-center mb-12 overflow-x-auto pb-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="inline-flex gap-2 p-1.5 bg-muted/50 rounded-2xl">
+              {categories.map((category) => (
+                <Button
+                  key={category.id}
+                  variant={selectedCategory === category.id ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`whitespace-nowrap rounded-xl py-3 px-5 font-medium transition-all ${
+                    selectedCategory === category.id 
+                      ? "shadow-lg" 
+                      : ""
+                  }`}
+                  data-testid={`button-filter-${category.id}`}
+                >
+                  {category.icon && <category.icon className="h-4 w-4 mr-2 hidden sm:block" />}
+                  <span className="text-xs sm:text-sm">{category.name}</span>
+                </Button>
+              ))}
+            </div>
+          </motion.div>
 
-            <TabsContent value={selectedCategory}>
-              <AnimatePresence mode="wait">
-                {isLoading ? (
-                  <motion.div 
-                    className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    {Array(6).fill(0).map((_, i) => (
-                      <Skeleton key={i} className="aspect-square rounded-2xl" />
-                    ))}
-                  </motion.div>
-                ) : filteredItems && filteredItems.length > 0 ? (
-                  <motion.div 
-                    className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    key={selectedCategory}
-                  >
-                    {filteredItems.map((item, index) => {
-                      const Icon = getCategoryIcon(item.category);
-                      return (
-                        <motion.div
-                          key={item.id}
-                          initial={{ opacity: 0, y: 30 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                        >
-                          <Card 
-                            className="overflow-hidden cursor-pointer group border-0 shadow-lg hover:shadow-2xl transition-all duration-500"
-                            onClick={() => setSelectedItem(item)}
-                            data-testid={`card-portfolio-${item.id}`}
-                          >
-                            <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/10 relative overflow-hidden img-hover-zoom">
-                              {(item.thumbnailUrl || item.mediaUrl) ? (
-                                <img 
-                                  src={item.thumbnailUrl || item.mediaUrl} 
-                                  alt={item.title}
-                                  className="absolute inset-0 w-full h-full object-cover"
-                                  data-testid={`img-portfolio-${item.id}`}
-                                />
-                              ) : (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <Icon className="h-20 w-20 text-muted-foreground/20" />
-                                </div>
-                              )}
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500">
-                                <motion.div 
-                                  className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30"
-                                  whileHover={{ scale: 1.1 }}
-                                >
-                                  <Eye className="w-6 h-6 text-white" />
-                                </motion.div>
-                              </div>
-                              {item.featured && (
-                                <Badge className="absolute top-4 right-4 bg-secondary/90 backdrop-blur-sm shadow-lg">Featured</Badge>
-                              )}
+          {/* Portfolio Items */}
+          <AnimatePresence mode="wait">
+            {isLoading ? (
+              <motion.div 
+                className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                {Array(6).fill(0).map((_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded-2xl" />
+                ))}
+              </motion.div>
+            ) : filteredItems && filteredItems.length > 0 ? (
+              <motion.div 
+                className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                key={selectedCategory}
+              >
+                {filteredItems.map((item, index) => {
+                  const Icon = getCategoryIcon(item.category);
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Card 
+                        className="overflow-hidden cursor-pointer group border-0 shadow-lg hover:shadow-2xl transition-all duration-500"
+                        onClick={() => setSelectedItem(item)}
+                        data-testid={`card-portfolio-${item.id}`}
+                      >
+                        <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/10 relative overflow-hidden img-hover-zoom">
+                          {(item.thumbnailUrl || item.mediaUrl) ? (
+                            <img 
+                              src={item.thumbnailUrl || item.mediaUrl} 
+                              alt={item.title}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              data-testid={`img-portfolio-${item.id}`}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Icon className="h-20 w-20 text-muted-foreground/20" />
                             </div>
-                            <CardContent className="p-5">
-                              <h3 className="font-display font-semibold text-lg mb-2 group-hover:text-primary transition-colors">{item.title}</h3>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="secondary" className="capitalize text-xs">
-                                  {item.category}
-                                </Badge>
-                                {item.client && (
-                                  <span className="text-sm text-muted-foreground">{item.client}</span>
-                                )}
-                                {item.date && (
-                                  <span className="text-sm text-muted-foreground">{item.date}</span>
-                                )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      );
-                    })}
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    className="text-center py-20"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <div className="icon-container-lg mx-auto mb-6">
-                      <Camera className="h-10 w-10 text-muted-foreground/50" />
-                    </div>
-                    <h3 className="text-xl font-display font-semibold mb-3">No items in this category</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">
-                      Check back soon for more work in this category.
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </TabsContent>
-          </Tabs>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500" />
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500">
+                            <motion.div 
+                              className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30"
+                              whileHover={{ scale: 1.1 }}
+                            >
+                              <Eye className="w-6 h-6 text-white" />
+                            </motion.div>
+                          </div>
+                          {item.featured && (
+                            <Badge className="absolute top-4 right-4 bg-secondary/90 backdrop-blur-sm shadow-lg">Featured</Badge>
+                          )}
+                        </div>
+                        <CardContent className="p-5">
+                          <h3 className="font-display font-semibold text-lg mb-2 group-hover:text-primary transition-colors" data-testid={`text-portfolio-title-${item.id}`}>{item.title}</h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary" className="capitalize text-xs">
+                              {item.category}
+                            </Badge>
+                            {item.client && (
+                              <span className="text-sm text-muted-foreground">{item.client}</span>
+                            )}
+                            {item.date && (
+                              <span className="text-sm text-muted-foreground">{item.date}</span>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <motion.div 
+                className="text-center py-20"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <div className="icon-container-lg mx-auto mb-6">
+                  <Camera className="h-10 w-10 text-muted-foreground/50" />
+                </div>
+                <h3 className="text-xl font-display font-semibold mb-3" data-testid="text-empty-portfolio">No items in this category</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Check back soon for more work in this category.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </section>
 
@@ -232,10 +235,10 @@ export default function Portfolio() {
               </div>
               <div className="p-6 space-y-4">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-display">{selectedItem.title}</DialogTitle>
+                  <DialogTitle className="text-2xl font-display" data-testid="text-modal-title">{selectedItem.title}</DialogTitle>
                 </DialogHeader>
                 {selectedItem.description && (
-                  <p className="text-muted-foreground leading-relaxed">{selectedItem.description}</p>
+                  <p className="text-muted-foreground leading-relaxed" data-testid="text-modal-description">{selectedItem.description}</p>
                 )}
                 <div className="flex items-center gap-3 flex-wrap pt-2">
                   <Badge variant="secondary" className="capitalize">{selectedItem.category}</Badge>

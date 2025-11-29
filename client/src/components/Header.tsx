@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Menu, ShoppingCart, Search, User, LogOut, Settings, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import logoImage from "@assets/states company logo_1764435536382.jpg";
 
 const navigation = [
@@ -71,12 +71,10 @@ export function Header() {
     >
       <nav className="container mx-auto flex h-16 md:h-18 items-center justify-between gap-4 px-4">
         <Link href="/" className="flex items-center gap-3 group" data-testid="link-logo">
-          <motion.img 
+          <img 
             src={logoImage} 
             alt="STATS Companies" 
-            className="h-10 md:h-11 w-auto transition-transform group-hover:scale-105"
-            whileHover={{ rotate: [0, -5, 5, 0] }}
-            transition={{ duration: 0.5 }}
+            className="h-10 md:h-11 w-auto transition-transform duration-300 group-hover:scale-105"
           />
           <span className="hidden font-display font-bold text-lg text-primary dark:text-white md:block tracking-tight">
             STATS COMPANIES
@@ -85,23 +83,25 @@ export function Header() {
 
         <div className="hidden lg:flex lg:items-center lg:gap-1">
           {navigation.map((item) => (
-            <Link key={item.name} href={item.href}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`font-medium transition-all relative group ${
-                  location === item.href 
-                    ? "text-primary dark:text-accent" 
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid={`link-nav-${item.name.toLowerCase()}`}
-              >
+            <Button
+              key={item.name}
+              variant="ghost"
+              size="sm"
+              asChild
+              className={`font-medium transition-all relative group ${
+                location === item.href 
+                  ? "text-primary dark:text-accent" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid={`link-nav-${item.name.toLowerCase()}`}
+            >
+              <Link href={item.href}>
                 {item.name}
                 <span className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-primary dark:bg-accent rounded-full transition-all duration-300 ${
                   location === item.href ? "w-4/5" : "w-0 group-hover:w-4/5"
                 }`} />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           ))}
         </div>
 
@@ -120,16 +120,17 @@ export function Header() {
           
           <ThemeToggle />
           
-          <Link href="/shop">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="relative"
-              data-testid="button-cart"
-            >
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            asChild
+            className="relative"
+            data-testid="button-cart"
+          >
+            <Link href="/shop">
               <ShoppingCart className="h-5 w-5" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
           {isLoading ? (
             <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
@@ -184,14 +185,15 @@ export function Header() {
             </Button>
           )}
           
-          <Link href="/quote" className="hidden sm:block">
-            <Button 
-              className="btn-premium bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full px-6 font-semibold"
-              data-testid="button-get-quote"
-            >
+          <Button 
+            asChild
+            className="hidden sm:flex btn-premium bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-full px-6 font-semibold"
+            data-testid="button-get-quote"
+          >
+            <Link href="/quote">
               Get a Quote
-            </Button>
-          </Link>
+            </Link>
+          </Button>
 
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild className="lg:hidden">
@@ -206,10 +208,9 @@ export function Header() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b">
                   <div className="flex items-center gap-2">
-                    <img src={logoImage} alt="STATS" className="h-8 w-auto" />
+                    <img src={logoImage} alt="STATS" className="h-8 w-auto" data-testid="img-mobile-logo" />
                     <span className="font-display font-bold text-sm">STATS COMPANIES</span>
                   </div>
                   <Button 
@@ -217,12 +218,12 @@ export function Header() {
                     size="icon" 
                     onClick={() => setMobileMenuOpen(false)}
                     className="rounded-full"
+                    data-testid="button-close-mobile-menu"
                   >
                     <X className="h-5 w-5" />
                   </Button>
                 </div>
 
-                {/* Search */}
                 <div className="px-4 pt-4">
                   <div className="relative">
                     <Input
@@ -237,7 +238,6 @@ export function Header() {
                   </div>
                 </div>
 
-                {/* Navigation */}
                 <div className="flex-1 overflow-y-auto px-4 py-6">
                   <div className="space-y-1">
                     {navigation.map((item, index) => (
@@ -247,38 +247,39 @@ export function Header() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.05 }}
                       >
-                        <Link
-                          href={item.href}
-                          onClick={() => setMobileMenuOpen(false)}
+                        <Button
+                          variant="ghost"
+                          asChild
+                          className={`w-full justify-start text-lg font-display h-12 ${
+                            location === item.href 
+                              ? "bg-primary/10 text-primary" 
+                              : "text-foreground"
+                          }`}
+                          data-testid={`link-mobile-nav-${item.name.toLowerCase()}`}
                         >
-                          <Button
-                            variant="ghost"
-                            className={`w-full justify-start text-lg font-display h-12 ${
-                              location === item.href 
-                                ? "bg-primary/10 text-primary" 
-                                : "text-foreground"
-                            }`}
-                            data-testid={`link-mobile-nav-${item.name.toLowerCase()}`}
-                          >
+                          <Link href={item.href} onClick={() => setMobileMenuOpen(false)}>
                             {item.name}
-                          </Button>
-                        </Link>
+                          </Link>
+                        </Button>
                       </motion.div>
                     ))}
                   </div>
                 </div>
 
-                {/* Bottom section */}
                 <div className="p-4 border-t bg-background/80 backdrop-blur-sm space-y-3">
-                  <Link href="/quote" onClick={() => setMobileMenuOpen(false)}>
-                    <Button className="w-full h-12 btn-premium bg-primary hover:bg-primary/90 shadow-lg rounded-full font-semibold" data-testid="button-mobile-get-quote">
+                  <Button 
+                    asChild 
+                    className="w-full h-12 btn-premium bg-primary hover:bg-primary/90 shadow-lg rounded-full font-semibold" 
+                    data-testid="button-mobile-get-quote"
+                  >
+                    <Link href="/quote" onClick={() => setMobileMenuOpen(false)}>
                       Get a Quote
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                   
                   {isAuthenticated && user ? (
                     <div className="space-y-3">
-                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
+                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl" data-testid="mobile-user-info">
                         <Avatar className="h-10 w-10">
                           <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground font-semibold">
                             {getInitials(user.firstName && user.lastName 
@@ -292,12 +293,17 @@ export function Header() {
                         </div>
                       </div>
                       {isAdmin && (
-                        <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
-                          <Button variant="outline" className="w-full h-11 rounded-full" data-testid="button-mobile-admin">
+                        <Button 
+                          variant="outline" 
+                          asChild 
+                          className="w-full h-11 rounded-full" 
+                          data-testid="button-mobile-admin"
+                        >
+                          <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
                             <Settings className="h-4 w-4 mr-2" />
                             Admin Dashboard
-                          </Button>
-                        </Link>
+                          </Link>
+                        </Button>
                       )}
                       <Button 
                         variant="destructive" 
