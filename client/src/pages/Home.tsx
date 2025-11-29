@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer, Camera, Video, Megaphone, ArrowRight, Star, CheckCircle } from "lucide-react";
-import type { Service, Testimonial, PortfolioItem, Promotion } from "@shared/schema";
+import { Printer, Camera, Video, Megaphone, ArrowRight, Star, Truck, Shield, Clock, ChevronRight, Quote } from "lucide-react";
+import type { Testimonial, PortfolioItem, Promotion, Product } from "@shared/schema";
 import logoImage from "@assets/states company logo_1764435536382.jpg";
 
 const services = [
@@ -14,36 +14,31 @@ const services = [
     title: "Digital Printing",
     description: "Business cards, flyers, banners, apparel, stickers, and large format printing.",
     href: "/shop",
-    color: "bg-blue-500/10 text-blue-600 dark:text-blue-400"
   },
   {
     icon: Camera,
     title: "Photography",
     description: "Event coverage, studio shoots, corporate portraits, weddings, and product photography.",
     href: "/services?category=photography",
-    color: "bg-green-500/10 text-green-600 dark:text-green-400"
   },
   {
     icon: Video,
     title: "Videography",
     description: "Event videos, corporate films, social media content, and wedding cinematography.",
     href: "/services?category=videography",
-    color: "bg-purple-500/10 text-purple-600 dark:text-purple-400"
   },
   {
     icon: Megaphone,
     title: "Digital Marketing",
     description: "Social media management, paid ads, content creation, and brand identity design.",
     href: "/services?category=marketing",
-    color: "bg-orange-500/10 text-orange-600 dark:text-orange-400"
   }
 ];
 
-const stats = [
-  { value: "500+", label: "Projects Completed" },
-  { value: "200+", label: "Happy Clients" },
-  { value: "5+", label: "Years Experience" },
-  { value: "4", label: "Services" }
+const features = [
+  { icon: Truck, title: "Fast Delivery", description: "Quick turnaround on all orders" },
+  { icon: Shield, title: "Quality Guaranteed", description: "Premium materials & finishes" },
+  { icon: Clock, title: "24/7 Support", description: "We're here when you need us" },
 ];
 
 export default function Home() {
@@ -59,121 +54,102 @@ export default function Home() {
     queryKey: ["/api/promotions"],
   });
 
+  const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
+    queryKey: ["/api/products"],
+  });
+
   return (
     <div className="flex flex-col">
-      <section className="relative hero-gradient text-white">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
-        <div className="container mx-auto px-4 py-20 md:py-32 relative z-10">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <img 
-              src={logoImage} 
-              alt="STATS Companies" 
-              className="h-24 md:h-32 w-auto mx-auto mb-4"
-              data-testid="img-hero-logo"
-            />
-            <Badge variant="secondary" className="mb-4" data-testid="badge-tagline">
-              You dream it, We make it
-            </Badge>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight" data-testid="text-hero-title">
-              Transform Your Vision Into Reality
-            </h1>
-            <p className="text-lg md:text-xl opacity-90 max-w-2xl mx-auto" data-testid="text-hero-description">
-              Professional digital printing, photography, videography, and digital marketing services in Pretoria. Quality craftsmanship for businesses and individuals.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Link href="/shop">
-                <Button size="lg" variant="secondary" className="w-full sm:w-auto" data-testid="button-hero-shop">
-                  Shop Printing
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/bookings">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white" data-testid="button-hero-book">
-                  Book a Session
-                </Button>
-              </Link>
-              <Link href="/quote">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto bg-white/10 border-white/30 hover:bg-white/20 text-white" data-testid="button-hero-quote">
-                  Request Quote
-                </Button>
-              </Link>
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="container mx-auto px-4 py-16 md:py-24">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <Badge className="bg-secondary text-white" data-testid="badge-tagline">
+                You dream it, We make it
+              </Badge>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary dark:text-white leading-tight" data-testid="text-hero-title">
+                Transform Your Vision Into Reality
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-xl" data-testid="text-hero-description">
+                Professional digital printing, photography, videography, and digital marketing services in Pretoria. Quality craftsmanship for businesses and individuals.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                <Link href="/shop">
+                  <Button size="lg" className="w-full sm:w-auto" data-testid="button-hero-shop">
+                    Shop Now
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/quote">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto" data-testid="button-hero-quote">
+                    Get a Quote
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            <div className="relative flex justify-center lg:justify-end">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-secondary/20 to-accent/20 rounded-full blur-3xl" />
+                <img 
+                  src={logoImage} 
+                  alt="STATS Companies" 
+                  className="relative h-64 md:h-80 lg:h-96 w-auto"
+                  data-testid="img-hero-logo"
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-16 bg-muted">
+      <section className="border-y bg-white dark:bg-card py-6">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center" data-testid={`stat-${index}`}>
-                <div className="text-3xl md:text-4xl font-bold text-primary">{stat.value}</div>
-                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+          <div className="grid md:grid-cols-3 gap-6 md:gap-0 md:divide-x divide-border">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-center gap-4 px-4 md:px-8 py-2" data-testid={`feature-${index}`}>
+                <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                  <feature.icon className="h-5 w-5 text-secondary" />
+                </div>
+                <div>
+                  <div className="font-semibold text-foreground">{feature.title}</div>
+                  <div className="text-sm text-muted-foreground">{feature.description}</div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="text-services-title">Our Services</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              From stunning prints to captivating visuals, we offer comprehensive creative services to elevate your brand.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {services.map((service, index) => (
-              <Link key={index} href={service.href}>
-                <Card className="h-full hover-elevate cursor-pointer group" data-testid={`card-service-${index}`}>
-                  <CardHeader>
-                    <div className={`w-12 h-12 rounded-md flex items-center justify-center mb-4 ${service.color}`}>
-                      <service.icon className="h-6 w-6" />
-                    </div>
-                    <CardTitle className="text-xl">{service.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-sm">
-                      {service.description}
-                    </CardDescription>
-                    <div className="mt-4 text-primary text-sm font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Learn more <ArrowRight className="h-3 w-3" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {promotions && promotions.length > 0 && (
-        <section className="py-16 bg-secondary/30">
+        <section className="py-16 bg-muted">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold mb-4" data-testid="text-promotions-title">Current Promotions</h2>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold">Deals of the Month</h2>
+              <Link href="/promotions">
+                <Button variant="ghost" className="gap-1" data-testid="link-view-all-promos">
+                  View All
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
             </div>
-            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              {promotions.map((promo) => (
-                <Card key={promo.id} className="border-primary/20" data-testid={`card-promo-${promo.id}`}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <CardTitle className="text-xl">{promo.title}</CardTitle>
-                        <CardDescription className="mt-2">{promo.description}</CardDescription>
-                      </div>
-                      {promo.discount && (
-                        <Badge variant="default" className="whitespace-nowrap">{promo.discount}</Badge>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {promo.validUntil && (
-                      <p className="text-sm text-muted-foreground">Valid until: {new Date(promo.validUntil).toLocaleDateString()}</p>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {promotions.slice(0, 4).map((promo) => (
+                <Card key={promo.id} className="overflow-hidden hover-elevate group" data-testid={`card-promo-${promo.id}`}>
+                  <div className="aspect-[4/3] bg-gradient-to-br from-secondary/10 to-accent/10 flex items-center justify-center relative">
+                    {promo.discount && (
+                      <span className="discount-badge">{promo.discount}</span>
                     )}
+                    <div className="text-center p-4">
+                      <div className="font-bold text-lg text-primary dark:text-white">{promo.title}</div>
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground line-clamp-2">{promo.description}</p>
                     <Link href="/quote">
-                      <Button className="mt-4" size="sm">Claim Offer</Button>
+                      <Button variant="ghost" className="p-0 h-auto mt-2 text-secondary hover:text-secondary/80">
+                        Claim Offer
+                        <ArrowRight className="h-3 w-3 ml-1" />
+                      </Button>
                     </Link>
                   </CardContent>
                 </Card>
@@ -183,120 +159,118 @@ export default function Home() {
         </section>
       )}
 
-      <section className="py-20 bg-muted">
+      <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="text-portfolio-title">Featured Work</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-4" data-testid="text-services-title">Our Services</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              A glimpse of our recent projects across printing, photography, videography, and marketing.
+              From stunning prints to captivating visuals, we offer comprehensive creative services to elevate your brand.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {portfolioLoading ? (
-              Array(6).fill(0).map((_, i) => (
-                <Skeleton key={i} className="h-64 rounded-md" />
-              ))
-            ) : portfolio?.slice(0, 6).map((item) => (
-              <Card key={item.id} className="overflow-hidden group hover-elevate" data-testid={`card-portfolio-${item.id}`}>
-                <div className="aspect-video bg-muted relative">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-4xl font-bold text-muted-foreground/20">
-                      {item.type === "video" ? <Video className="h-12 w-12" /> : <Camera className="h-12 w-12" />}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {services.map((service, index) => (
+              <Link key={index} href={service.href}>
+                <Card className="h-full hover-elevate cursor-pointer group text-center" data-testid={`card-service-${index}`}>
+                  <CardHeader className="pb-4">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
+                      <service.icon className="h-7 w-7 text-primary dark:text-white" />
                     </div>
-                  </div>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold">{item.title}</h3>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="secondary">{item.category}</Badge>
-                    {item.client && <span className="text-sm text-muted-foreground">{item.client}</span>}
-                  </div>
-                </CardContent>
-              </Card>
+                    <CardTitle className="text-lg">{service.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{service.description}</p>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
-          <div className="text-center mt-8">
-            <Link href="/portfolio">
-              <Button variant="outline" data-testid="button-view-portfolio">
-                View Full Portfolio
-                <ArrowRight className="ml-2 h-4 w-4" />
+        </div>
+      </section>
+
+      <section className="py-16 bg-muted">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold">Popular Products</h2>
+            <Link href="/shop">
+              <Button variant="ghost" className="gap-1" data-testid="link-view-all-products">
+                View All
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
-        </div>
-      </section>
-
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4" data-testid="text-testimonials-title">What Our Clients Say</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Don't just take our word for it - hear from our satisfied clients.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {testimonialsLoading ? (
-              Array(3).fill(0).map((_, i) => (
-                <Skeleton key={i} className="h-48 rounded-md" />
-              ))
-            ) : testimonials?.map((testimonial) => (
-              <Card key={testimonial.id} data-testid={`card-testimonial-${testimonial.id}`}>
-                <CardContent className="pt-6">
-                  <div className="flex gap-1 mb-4">
-                    {Array(testimonial.rating).fill(0).map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-muted-foreground italic mb-4">"{testimonial.content}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-semibold text-primary">
-                        {testimonial.name.charAt(0)}
-                      </span>
+          {productsLoading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Array(4).fill(0).map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded-md" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {products?.slice(0, 4).map((product) => (
+                <Link key={product.id} href="/shop">
+                  <Card className="overflow-hidden hover-elevate group cursor-pointer" data-testid={`card-product-${product.id}`}>
+                    <div className="aspect-square bg-gradient-to-br from-blue-100 to-blue-50 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center relative">
+                      <Printer className="h-16 w-16 text-primary/30" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-sm">{testimonial.name}</p>
-                      {testimonial.company && (
-                        <p className="text-xs text-muted-foreground">{testimonial.company}</p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold mb-1">{product.name}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{product.description}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-primary">From R{product.basePrice}</span>
+                        <Badge variant="secondary">{product.category}</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="py-20 bg-muted">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose STATS Companies?</h2>
+      {testimonials && testimonials.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">What Our Clients Say</h2>
+              <p className="text-muted-foreground">Trusted by businesses and individuals across South Africa</p>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {testimonialsLoading ? (
+                Array(3).fill(0).map((_, i) => (
+                  <Skeleton key={i} className="h-48 rounded-md" />
+                ))
+              ) : (
+                testimonials.slice(0, 3).map((testimonial) => (
+                  <Card key={testimonial.id} className="relative" data-testid={`card-testimonial-${testimonial.id}`}>
+                    <CardContent className="pt-6">
+                      <Quote className="h-8 w-8 text-secondary/20 absolute top-4 right-4" />
+                      <div className="flex mb-3">
+                        {Array(testimonial.rating || 5).fill(0).map((_, i) => (
+                          <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        ))}
+                      </div>
+                      <p className="text-muted-foreground mb-4 line-clamp-4">"{testimonial.content}"</p>
+                      <div className="pt-4 border-t">
+                        <div className="font-semibold">{testimonial.name}</div>
+                        {testimonial.company && (
+                          <div className="text-sm text-muted-foreground">{testimonial.company}</div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
-            {[
-              { title: "Quality First", desc: "Premium materials and professional execution on every project." },
-              { title: "Fast Turnaround", desc: "Efficient delivery without compromising on quality." },
-              { title: "Creative Experts", desc: "A team of experienced designers, photographers, and marketers." },
-              { title: "Fair Pricing", desc: "Competitive rates with transparent pricing, no hidden costs." }
-            ].map((item, index) => (
-              <div key={index} className="text-center" data-testid={`feature-${index}`}>
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section className="py-20 hero-gradient text-white">
+      <section className="py-16 hero-gradient text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Start Your Project?</h2>
-          <p className="text-lg opacity-90 max-w-2xl mx-auto mb-8">
-            Whether you need printing, photography, videography, or marketing services, we're here to help bring your vision to life.
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to Start Your Project?</h2>
+          <p className="text-white/80 max-w-2xl mx-auto mb-8">
+            Get in touch with us today and let's bring your vision to life. From printing to photography, we've got you covered.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/quote">
@@ -305,7 +279,7 @@ export default function Home() {
               </Button>
             </Link>
             <Link href="/bookings">
-              <Button size="lg" variant="outline" className="bg-white/10 border-white/30 hover:bg-white/20 text-white" data-testid="button-cta-book">
+              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" data-testid="button-cta-book">
                 Book a Session
               </Button>
             </Link>

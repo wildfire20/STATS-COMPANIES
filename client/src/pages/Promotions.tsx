@@ -14,14 +14,14 @@ export default function Promotions() {
 
   return (
     <div className="flex flex-col">
-      <section className="py-20 hero-gradient text-white">
+      <section className="py-12 bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-b">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <Badge variant="secondary" className="mb-4">Special Offers</Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6" data-testid="text-promotions-title">
+          <div className="max-w-3xl">
+            <Badge className="bg-secondary text-white mb-4">Special Offers</Badge>
+            <h1 className="text-3xl md:text-4xl font-bold text-primary dark:text-white mb-4" data-testid="text-promotions-title">
               Promotions & Discounts
             </h1>
-            <p className="text-lg opacity-90">
+            <p className="text-muted-foreground text-lg">
               Take advantage of our current promotions and special offers. Limited time deals on printing, photography, videography, and marketing services.
             </p>
           </div>

@@ -13,22 +13,26 @@ export default function About() {
 
   return (
     <div className="flex flex-col">
-      <section className="py-20 hero-gradient text-white">
+      <section className="py-12 bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-b">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <img 
-              src={logoImage} 
-              alt="STATS Companies" 
-              className="h-20 w-auto mx-auto mb-6"
-              data-testid="img-about-logo"
-            />
-            <Badge variant="secondary" className="mb-4">About Us</Badge>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6" data-testid="text-about-title">
-              Our Story
-            </h1>
-            <p className="text-lg opacity-90">
-              STATS Companies started in 2020 in the middle of a pandemic, from the skills and knowledge we acquired. We began with design and large format printing, later introducing videography and photography services.
-            </p>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <Badge className="bg-secondary text-white mb-4">About Us</Badge>
+              <h1 className="text-3xl md:text-4xl font-bold text-primary dark:text-white mb-4" data-testid="text-about-title">
+                Our Story
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                STATS Companies started in 2020 in the middle of a pandemic, from the skills and knowledge we acquired. We began with design and large format printing, later introducing videography and photography services.
+              </p>
+            </div>
+            <div className="flex justify-center lg:justify-end">
+              <img 
+                src={logoImage} 
+                alt="STATS Companies" 
+                className="h-48 md:h-64 w-auto"
+                data-testid="img-about-logo"
+              />
+            </div>
           </div>
         </div>
       </section>
