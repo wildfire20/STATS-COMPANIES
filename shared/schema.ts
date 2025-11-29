@@ -1,24 +1,32 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, decimal, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table for Replit Auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table for Replit Auth
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  name: text("name").notNull(),
-  phone: text("phone"),
-  role: text("role").notNull().default("customer"),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  role: varchar("role").default("customer"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
 export const products = pgTable("products", {
@@ -30,6 +38,8 @@ export const products = pgTable("products", {
   image: text("image"),
   options: jsonb("options").$type<ProductOption[]>(),
   isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export interface ProductOption {
@@ -43,6 +53,8 @@ export interface ProductOption {
 
 export const insertProductSchema = createInsertSchema(products).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export type InsertProduct = z.infer<typeof insertProductSchema>;
@@ -57,10 +69,14 @@ export const services = pgTable("services", {
   image: text("image"),
   features: text("features").array(),
   isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertServiceSchema = createInsertSchema(services).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export type InsertService = z.infer<typeof insertServiceSchema>;
@@ -77,10 +93,12 @@ export const portfolioItems = pgTable("portfolio_items", {
   client: text("client"),
   date: text("date"),
   featured: boolean("featured").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).omit({
   id: true,
+  createdAt: true,
 });
 
 export type InsertPortfolioItem = z.infer<typeof insertPortfolioItemSchema>;
@@ -173,10 +191,14 @@ export const promotions = pgTable("promotions", {
   validUntil: text("valid_until"),
   image: text("image"),
   isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const insertPromotionSchema = createInsertSchema(promotions).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export type InsertPromotion = z.infer<typeof insertPromotionSchema>;
@@ -190,10 +212,12 @@ export const testimonials = pgTable("testimonials", {
   rating: integer("rating").notNull().default(5),
   image: text("image"),
   featured: boolean("featured").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
   id: true,
+  createdAt: true,
 });
 
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
@@ -207,10 +231,12 @@ export const teamMembers = pgTable("team_members", {
   image: text("image"),
   experience: text("experience"),
   order: integer("order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
   id: true,
+  createdAt: true,
 });
 
 export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;

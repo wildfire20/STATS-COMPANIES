@@ -1,13 +1,35 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { type Server } from "http";
 import { storage } from "./storage";
-import { insertBookingSchema, insertQuoteRequestSchema, insertOrderSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { ObjectPermission } from "./objectAcl";
+import { 
+  insertBookingSchema, 
+  insertQuoteRequestSchema, 
+  insertOrderSchema,
+  insertProductSchema,
+  insertServiceSchema,
+  insertPromotionSchema,
+  insertPortfolioItemSchema,
+  insertTestimonialSchema,
+  insertTeamMemberSchema
+} from "@shared/schema";
 import { z } from "zod";
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {
+  await setupAuth(app);
+
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
 
   app.get("/api/products", async (req, res) => {
     try {
@@ -178,5 +200,480 @@ export async function registerRoutes(
     }
   });
 
-  return httpServer;
+  app.get("/api/admin/stats", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const [orders, bookings, quotes, products, services] = await Promise.all([
+        storage.getOrders(),
+        storage.getBookings(),
+        storage.getQuoteRequests(),
+        storage.getAllProducts(),
+        storage.getAllServices(),
+      ]);
+
+      const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+      const pendingOrders = orders.filter(o => o.status === 'pending').length;
+      const pendingBookings = bookings.filter(b => b.status === 'pending').length;
+      const newQuotes = quotes.filter(q => q.status === 'new').length;
+
+      res.json({
+        totalRevenue,
+        totalOrders: orders.length,
+        pendingOrders,
+        totalBookings: bookings.length,
+        pendingBookings,
+        totalQuotes: quotes.length,
+        newQuotes,
+        totalProducts: products.length,
+        totalServices: services.length,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  app.get("/api/admin/products", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const products = await storage.getAllProducts();
+      res.json(products);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
+  });
+
+  app.post("/api/admin/products", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const data = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(data);
+      res.status(201).json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid product data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create product" });
+    }
+  });
+
+  app.put("/api/admin/products/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const product = await storage.updateProduct(req.params.id, req.body);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      res.json(product);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update product" });
+    }
+  });
+
+  app.delete("/api/admin/products/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteProduct(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete product" });
+    }
+  });
+
+  app.get("/api/admin/services", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const services = await storage.getAllServices();
+      res.json(services);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch services" });
+    }
+  });
+
+  app.post("/api/admin/services", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const data = insertServiceSchema.parse(req.body);
+      const service = await storage.createService(data);
+      res.status(201).json(service);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid service data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create service" });
+    }
+  });
+
+  app.put("/api/admin/services/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const service = await storage.updateService(req.params.id, req.body);
+      if (!service) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      res.json(service);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update service" });
+    }
+  });
+
+  app.delete("/api/admin/services/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteService(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete service" });
+    }
+  });
+
+  app.get("/api/admin/promotions", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const promotions = await storage.getPromotions();
+      res.json(promotions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch promotions" });
+    }
+  });
+
+  app.post("/api/admin/promotions", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const data = insertPromotionSchema.parse(req.body);
+      const promotion = await storage.createPromotion(data);
+      res.status(201).json(promotion);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid promotion data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create promotion" });
+    }
+  });
+
+  app.put("/api/admin/promotions/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const promotion = await storage.updatePromotion(req.params.id, req.body);
+      if (!promotion) {
+        return res.status(404).json({ error: "Promotion not found" });
+      }
+      res.json(promotion);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update promotion" });
+    }
+  });
+
+  app.delete("/api/admin/promotions/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deletePromotion(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete promotion" });
+    }
+  });
+
+  app.get("/api/admin/portfolio", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const items = await storage.getPortfolioItems();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch portfolio items" });
+    }
+  });
+
+  app.post("/api/admin/portfolio", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const data = insertPortfolioItemSchema.parse(req.body);
+      const item = await storage.createPortfolioItem(data);
+      res.status(201).json(item);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid portfolio data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create portfolio item" });
+    }
+  });
+
+  app.put("/api/admin/portfolio/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const item = await storage.updatePortfolioItem(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ error: "Portfolio item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update portfolio item" });
+    }
+  });
+
+  app.delete("/api/admin/portfolio/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deletePortfolioItem(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete portfolio item" });
+    }
+  });
+
+  app.get("/api/admin/orders", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const orders = await storage.getOrders();
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch orders" });
+    }
+  });
+
+  app.put("/api/admin/orders/:id/status", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { status, paymentStatus } = req.body;
+      const order = await storage.updateOrderStatus(req.params.id, status, paymentStatus);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update order status" });
+    }
+  });
+
+  app.delete("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteOrder(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete order" });
+    }
+  });
+
+  app.get("/api/admin/bookings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const bookings = await storage.getBookings();
+      res.json(bookings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
+  app.put("/api/admin/bookings/:id/status", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const booking = await storage.updateBookingStatus(req.params.id, status);
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+      res.json(booking);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update booking status" });
+    }
+  });
+
+  app.delete("/api/admin/bookings/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteBooking(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete booking" });
+    }
+  });
+
+  app.get("/api/admin/quotes", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const quotes = await storage.getQuoteRequests();
+      res.json(quotes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch quotes" });
+    }
+  });
+
+  app.put("/api/admin/quotes/:id/status", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      const quote = await storage.updateQuoteRequestStatus(req.params.id, status);
+      if (!quote) {
+        return res.status(404).json({ error: "Quote not found" });
+      }
+      res.json(quote);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update quote status" });
+    }
+  });
+
+  app.delete("/api/admin/quotes/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteQuoteRequest(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete quote" });
+    }
+  });
+
+  app.get("/api/admin/testimonials", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const testimonials = await storage.getTestimonials();
+      res.json(testimonials);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch testimonials" });
+    }
+  });
+
+  app.post("/api/admin/testimonials", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const data = insertTestimonialSchema.parse(req.body);
+      const testimonial = await storage.createTestimonial(data);
+      res.status(201).json(testimonial);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid testimonial data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create testimonial" });
+    }
+  });
+
+  app.put("/api/admin/testimonials/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const testimonial = await storage.updateTestimonial(req.params.id, req.body);
+      if (!testimonial) {
+        return res.status(404).json({ error: "Testimonial not found" });
+      }
+      res.json(testimonial);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update testimonial" });
+    }
+  });
+
+  app.delete("/api/admin/testimonials/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteTestimonial(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete testimonial" });
+    }
+  });
+
+  app.get("/api/admin/team", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const members = await storage.getTeamMembers();
+      res.json(members);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch team members" });
+    }
+  });
+
+  app.post("/api/admin/team", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const data = insertTeamMemberSchema.parse(req.body);
+      const member = await storage.createTeamMember(data);
+      res.status(201).json(member);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid team member data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create team member" });
+    }
+  });
+
+  app.put("/api/admin/team/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const member = await storage.updateTeamMember(req.params.id, req.body);
+      if (!member) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update team member" });
+    }
+  });
+
+  app.delete("/api/admin/team/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteTeamMember(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete team member" });
+    }
+  });
+
+  app.get("/api/admin/users", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.put("/api/admin/users/:id/role", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { role } = req.body;
+      const user = await storage.updateUserRole(req.params.id, role);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user role" });
+    }
+  });
+
+  app.get("/public-objects/:filePath(*)", async (req, res) => {
+    const filePath = req.params.filePath;
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const file = await objectStorageService.searchPublicObject(filePath);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      objectStorageService.downloadObject(file, res);
+    } catch (error) {
+      console.error("Error searching for public object:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      const canAccess = await objectStorageService.canAccessObjectEntity({
+        objectFile,
+        userId: userId,
+        requestedPermission: ObjectPermission.READ,
+      });
+      if (!canAccess) {
+        return res.sendStatus(401);
+      }
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error checking object access:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
+  app.post("/api/objects/upload", isAuthenticated, isAdmin, async (req, res) => {
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error getting upload URL:", error);
+      res.status(500).json({ error: "Failed to get upload URL" });
+    }
+  });
+
+  app.put("/api/objects/update", isAuthenticated, isAdmin, async (req: any, res) => {
+    if (!req.body.imageURL) {
+      return res.status(400).json({ error: "imageURL is required" });
+    }
+
+    const userId = req.user?.claims?.sub;
+
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
+        req.body.imageURL,
+        {
+          owner: userId,
+          visibility: "public",
+        },
+      );
+
+      res.status(200).json({ objectPath });
+    } catch (error) {
+      console.error("Error setting image:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 }

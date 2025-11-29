@@ -1,23 +1,26 @@
 import { 
-  type User, type InsertUser,
-  type Product, type InsertProduct, type ProductOption,
-  type Service, type InsertService,
-  type PortfolioItem, type InsertPortfolioItem,
-  type Booking, type InsertBooking,
-  type Order, type InsertOrder, type OrderItem,
-  type QuoteRequest, type InsertQuoteRequest,
-  type Promotion, type InsertPromotion,
-  type Testimonial, type InsertTestimonial,
-  type TeamMember, type InsertTeamMember,
+  users, type User, type UpsertUser,
+  products, type Product, type InsertProduct, type ProductOption,
+  services, type Service, type InsertService,
+  portfolioItems, type PortfolioItem, type InsertPortfolioItem,
+  bookings, type Booking, type InsertBooking,
+  orders, type Order, type InsertOrder,
+  quoteRequests, type QuoteRequest, type InsertQuoteRequest,
+  promotions, type Promotion, type InsertPromotion,
+  testimonials, type Testimonial, type InsertTestimonial,
+  teamMembers, type TeamMember, type InsertTeamMember,
 } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  updateUserRole(id: string, role: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   
   getProducts(): Promise<Product[]>;
+  getAllProducts(): Promise<Product[]>;
   getProduct(id: string): Promise<Product | undefined>;
   getProductsByCategory(category: string): Promise<Product[]>;
   createProduct(product: InsertProduct): Promise<Product>;
@@ -25,759 +28,391 @@ export interface IStorage {
   deleteProduct(id: string): Promise<boolean>;
   
   getServices(): Promise<Service[]>;
+  getAllServices(): Promise<Service[]>;
   getService(id: string): Promise<Service | undefined>;
   getServicesByCategory(category: string): Promise<Service[]>;
   createService(service: InsertService): Promise<Service>;
+  updateService(id: string, service: Partial<InsertService>): Promise<Service | undefined>;
+  deleteService(id: string): Promise<boolean>;
   
   getPortfolioItems(): Promise<PortfolioItem[]>;
   getPortfolioItem(id: string): Promise<PortfolioItem | undefined>;
   getPortfolioItemsByCategory(category: string): Promise<PortfolioItem[]>;
   getFeaturedPortfolioItems(): Promise<PortfolioItem[]>;
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
+  updatePortfolioItem(id: string, item: Partial<InsertPortfolioItem>): Promise<PortfolioItem | undefined>;
+  deletePortfolioItem(id: string): Promise<boolean>;
   
   getBookings(): Promise<Booking[]>;
   getBooking(id: string): Promise<Booking | undefined>;
   getBookingsByUser(userId: string): Promise<Booking[]>;
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBookingStatus(id: string, status: string): Promise<Booking | undefined>;
+  deleteBooking(id: string): Promise<boolean>;
   
   getOrders(): Promise<Order[]>;
   getOrder(id: string): Promise<Order | undefined>;
   getOrdersByUser(userId: string): Promise<Order[]>;
   createOrder(order: InsertOrder): Promise<Order>;
-  updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
+  updateOrderStatus(id: string, status: string, paymentStatus?: string): Promise<Order | undefined>;
+  deleteOrder(id: string): Promise<boolean>;
   
   getQuoteRequests(): Promise<QuoteRequest[]>;
+  getQuoteRequest(id: string): Promise<QuoteRequest | undefined>;
   createQuoteRequest(quote: InsertQuoteRequest): Promise<QuoteRequest>;
   updateQuoteRequestStatus(id: string, status: string): Promise<QuoteRequest | undefined>;
+  deleteQuoteRequest(id: string): Promise<boolean>;
   
   getPromotions(): Promise<Promotion[]>;
   getActivePromotions(): Promise<Promotion[]>;
+  getPromotion(id: string): Promise<Promotion | undefined>;
   createPromotion(promotion: InsertPromotion): Promise<Promotion>;
+  updatePromotion(id: string, promotion: Partial<InsertPromotion>): Promise<Promotion | undefined>;
+  deletePromotion(id: string): Promise<boolean>;
   
   getTestimonials(): Promise<Testimonial[]>;
   getFeaturedTestimonials(): Promise<Testimonial[]>;
+  getTestimonial(id: string): Promise<Testimonial | undefined>;
   createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial>;
+  updateTestimonial(id: string, testimonial: Partial<InsertTestimonial>): Promise<Testimonial | undefined>;
+  deleteTestimonial(id: string): Promise<boolean>;
   
   getTeamMembers(): Promise<TeamMember[]>;
+  getTeamMember(id: string): Promise<TeamMember | undefined>;
   createTeamMember(member: InsertTeamMember): Promise<TeamMember>;
+  updateTeamMember(id: string, member: Partial<InsertTeamMember>): Promise<TeamMember | undefined>;
+  deleteTeamMember(id: string): Promise<boolean>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private products: Map<string, Product>;
-  private services: Map<string, Service>;
-  private portfolioItems: Map<string, PortfolioItem>;
-  private bookings: Map<string, Booking>;
-  private orders: Map<string, Order>;
-  private quoteRequests: Map<string, QuoteRequest>;
-  private promotions: Map<string, Promotion>;
-  private testimonials: Map<string, Testimonial>;
-  private teamMembers: Map<string, TeamMember>;
-
-  constructor() {
-    this.users = new Map();
-    this.products = new Map();
-    this.services = new Map();
-    this.portfolioItems = new Map();
-    this.bookings = new Map();
-    this.orders = new Map();
-    this.quoteRequests = new Map();
-    this.promotions = new Map();
-    this.testimonials = new Map();
-    this.teamMembers = new Map();
-    
-    this.seedData();
-  }
-
-  private seedData() {
-    const productData: Array<{
-      name: string;
-      description: string;
-      category: string;
-      basePrice: string;
-      image: string | null;
-      options: ProductOption[] | null;
-      isActive: boolean | null;
-    }> = [
-      {
-        name: "Business Cards",
-        description: "Premium quality business cards with various finishes. Make a lasting impression with professionally printed cards.",
-        category: "printing",
-        basePrice: "150.00",
-        image: null,
-        options: [
-          { name: "Quantity", type: "select", values: [
-            { label: "100 cards", price: 0 },
-            { label: "250 cards", price: 80 },
-            { label: "500 cards", price: 150 },
-            { label: "1000 cards", price: 250 }
-          ]},
-          { name: "Finish", type: "select", values: [
-            { label: "Matte", price: 0 },
-            { label: "Glossy", price: 30 },
-            { label: "Soft Touch", price: 50 }
-          ]},
-          { name: "Print Sides", type: "select", values: [
-            { label: "Single Sided", price: 0 },
-            { label: "Double Sided", price: 40 }
-          ]}
-        ],
-        isActive: true
-      },
-      {
-        name: "Flyers & Brochures",
-        description: "Eye-catching flyers and brochures for your marketing campaigns. Available in multiple sizes and paper types.",
-        category: "printing",
-        basePrice: "200.00",
-        image: null,
-        options: [
-          { name: "Size", type: "select", values: [
-            { label: "A5", price: 0 },
-            { label: "A4", price: 50 },
-            { label: "A3", price: 100 }
-          ]},
-          { name: "Quantity", type: "select", values: [
-            { label: "100", price: 0 },
-            { label: "250", price: 100 },
-            { label: "500", price: 180 },
-            { label: "1000", price: 300 }
-          ]}
-        ],
-        isActive: true
-      },
-      {
-        name: "Posters & Banners",
-        description: "Large format printing for maximum impact. Perfect for events, advertising, and promotions.",
-        category: "printing",
-        basePrice: "350.00",
-        image: null,
-        options: [
-          { name: "Size", type: "select", values: [
-            { label: "A2 Poster", price: 0 },
-            { label: "A1 Poster", price: 100 },
-            { label: "A0 Poster", price: 200 },
-            { label: "Pull-up Banner", price: 400 }
-          ]},
-          { name: "Material", type: "select", values: [
-            { label: "Paper", price: 0 },
-            { label: "Vinyl", price: 80 },
-            { label: "Canvas", price: 150 }
-          ]}
-        ],
-        isActive: true
-      },
-      {
-        name: "T-Shirts & Apparel",
-        description: "Custom branded clothing for teams, events, and promotions. High-quality prints that last.",
-        category: "apparel",
-        basePrice: "180.00",
-        image: null,
-        options: [
-          { name: "Size", type: "select", values: [
-            { label: "S", price: 0 },
-            { label: "M", price: 0 },
-            { label: "L", price: 0 },
-            { label: "XL", price: 20 },
-            { label: "XXL", price: 40 }
-          ]},
-          { name: "Quantity", type: "select", values: [
-            { label: "1-10", price: 0 },
-            { label: "11-25", price: -20 },
-            { label: "26-50", price: -40 },
-            { label: "50+", price: -60 }
-          ]}
-        ],
-        isActive: true
-      },
-      {
-        name: "Stickers & Labels",
-        description: "Custom stickers and labels for products, packaging, and branding. Waterproof options available.",
-        category: "printing",
-        basePrice: "120.00",
-        image: null,
-        options: [
-          { name: "Shape", type: "select", values: [
-            { label: "Round", price: 0 },
-            { label: "Square", price: 0 },
-            { label: "Rectangle", price: 0 },
-            { label: "Custom Die-Cut", price: 50 }
-          ]},
-          { name: "Quantity", type: "select", values: [
-            { label: "100", price: 0 },
-            { label: "250", price: 60 },
-            { label: "500", price: 100 },
-            { label: "1000", price: 160 }
-          ]}
-        ],
-        isActive: true
-      },
-      {
-        name: "Corporate Gift Items",
-        description: "Branded corporate gifts including mugs, pens, notebooks, and more. Perfect for client appreciation.",
-        category: "gifts",
-        basePrice: "250.00",
-        image: null,
-        options: [
-          { name: "Item Type", type: "select", values: [
-            { label: "Branded Mug", price: 0 },
-            { label: "Pen Set", price: -50 },
-            { label: "Notebook", price: 30 },
-            { label: "Gift Hamper", price: 200 }
-          ]},
-          { name: "Quantity", type: "select", values: [
-            { label: "10", price: 0 },
-            { label: "25", price: 150 },
-            { label: "50", price: 280 },
-            { label: "100", price: 500 }
-          ]}
-        ],
-        isActive: true
-      }
-    ];
-
-    productData.forEach(p => {
-      const id = randomUUID();
-      this.products.set(id, { ...p, id });
-    });
-
-    const serviceData: Array<{
-      name: string;
-      description: string;
-      category: string;
-      startingPrice: string;
-      image: string | null;
-      features: string[] | null;
-      isActive: boolean | null;
-    }> = [
-      {
-        name: "Event Photography",
-        description: "Professional photography coverage for corporate events, conferences, and special occasions.",
-        category: "photography",
-        startingPrice: "2500.00",
-        image: null,
-        features: ["Full event coverage", "Edited high-res images", "Online gallery", "Quick turnaround"],
-        isActive: true
-      },
-      {
-        name: "Studio Photoshoots",
-        description: "Professional studio sessions for portraits, products, and creative projects.",
-        category: "photography",
-        startingPrice: "1500.00",
-        image: null,
-        features: ["2-hour session", "Professional lighting", "Multiple backgrounds", "Retouched images"],
-        isActive: true
-      },
-      {
-        name: "Wedding Photography",
-        description: "Capture your special day with our experienced wedding photography team.",
-        category: "photography",
-        startingPrice: "8000.00",
-        image: null,
-        features: ["Full day coverage", "Second photographer", "Engagement shoot", "Premium album"],
-        isActive: true
-      },
-      {
-        name: "Event Videography",
-        description: "Professional video coverage for events, conferences, and special occasions.",
-        category: "videography",
-        startingPrice: "4000.00",
-        image: null,
-        features: ["Full HD recording", "Professional editing", "Highlight reel", "Raw footage"],
-        isActive: true
-      },
-      {
-        name: "Corporate Videos",
-        description: "Company profiles, training videos, and promotional content for your business.",
-        category: "videography",
-        startingPrice: "6000.00",
-        image: null,
-        features: ["Script development", "Professional crew", "Voiceover", "Motion graphics"],
-        isActive: true
-      },
-      {
-        name: "Social Media Videos",
-        description: "Short-form content optimized for social media platforms.",
-        category: "videography",
-        startingPrice: "2000.00",
-        image: null,
-        features: ["Platform-optimized", "Quick turnaround", "Trending formats", "Subtitles"],
-        isActive: true
-      },
-      {
-        name: "Social Media Management",
-        description: "Complete social media management including content creation and scheduling.",
-        category: "marketing",
-        startingPrice: "3500.00",
-        image: null,
-        features: ["Content calendar", "Daily posting", "Engagement", "Monthly reports"],
-        isActive: true
-      },
-      {
-        name: "Paid Advertising",
-        description: "Google Ads and Facebook/Instagram advertising campaigns.",
-        category: "marketing",
-        startingPrice: "2500.00",
-        image: null,
-        features: ["Campaign setup", "Ad creative", "Targeting", "Optimization"],
-        isActive: true
-      },
-      {
-        name: "Brand Identity Design",
-        description: "Complete brand identity including logo, colors, and brand guidelines.",
-        category: "marketing",
-        startingPrice: "5000.00",
-        image: null,
-        features: ["Logo design", "Color palette", "Typography", "Brand guidelines"],
-        isActive: true
-      }
-    ];
-
-    serviceData.forEach(s => {
-      const id = randomUUID();
-      this.services.set(id, { ...s, id });
-    });
-
-    const testimonialData: Array<{
-      name: string;
-      company: string | null;
-      content: string;
-      rating: number;
-      image: string | null;
-      featured: boolean | null;
-    }> = [
-      {
-        name: "Sarah Mokwena",
-        company: "Tech Solutions SA",
-        content: "STATS Companies delivered exceptional quality on our corporate branding project. Their attention to detail and creative approach exceeded our expectations.",
-        rating: 5,
-        image: null,
-        featured: true
-      },
-      {
-        name: "David Naidoo",
-        company: "Urban Events",
-        content: "The videography team captured our product launch perfectly. Professional, creative, and delivered on time. Highly recommend!",
-        rating: 5,
-        image: null,
-        featured: true
-      },
-      {
-        name: "Thandi Zulu",
-        company: "Bloom Boutique",
-        content: "Our wedding photos and video are absolutely stunning. The team made us feel comfortable and the results speak for themselves.",
-        rating: 5,
-        image: null,
-        featured: true
-      }
-    ];
-
-    testimonialData.forEach(t => {
-      const id = randomUUID();
-      this.testimonials.set(id, { ...t, id });
-    });
-
-    const teamData: Array<{
-      name: string;
-      role: string;
-      bio: string | null;
-      image: string | null;
-      experience: string | null;
-      order: number | null;
-    }> = [
-      {
-        name: "Khumo Sepeng",
-        role: "Creative Director & Print Specialist",
-        bio: "With 10 years of graphic design experience and 8 years as a printing machine operator, Khumo leads our creative vision and ensures the highest print quality.",
-        image: null,
-        experience: "10 years in graphic design, 8 years in printing",
-        order: 1
-      },
-      {
-        name: "Justin Mwenge",
-        role: "Head of Photography & Videography",
-        bio: "Justin brings 7 years of photography and videography expertise, along with 6 years of graphic design skills, to capture stunning visuals for our clients.",
-        image: null,
-        experience: "7 years in photography and videography, 6 years in graphic design",
-        order: 2
-      },
-      {
-        name: "Nomathemba Sepeng",
-        role: "Marketing & PR Director",
-        bio: "With 8 years in public relations and 7 years in marketing management, Nomathemba drives our marketing strategies and client relationships.",
-        image: null,
-        experience: "8 years in public relations, 7 years in marketing management",
-        order: 3
-      }
-    ];
-
-    teamData.forEach(m => {
-      const id = randomUUID();
-      this.teamMembers.set(id, { ...m, id });
-    });
-
-    const promotionData: Array<{
-      title: string;
-      description: string;
-      discount: string | null;
-      validUntil: string | null;
-      image: string | null;
-      isActive: boolean | null;
-    }> = [
-      {
-        title: "Wedding Season Special",
-        description: "Book your wedding photography and videography package and get 15% off plus a free engagement shoot.",
-        discount: "15% off + Free Engagement Shoot",
-        validUntil: "2025-03-31",
-        image: null,
-        isActive: true
-      },
-      {
-        title: "Business Starter Pack",
-        description: "Get 500 business cards, letterhead design, and a logo refresh for one amazing price.",
-        discount: "Save R500",
-        validUntil: "2025-02-28",
-        image: null,
-        isActive: true
-      }
-    ];
-
-    promotionData.forEach(p => {
-      const id = randomUUID();
-      this.promotions.set(id, { ...p, id });
-    });
-
-    const portfolioData: Array<{
-      title: string;
-      description: string | null;
-      category: string;
-      type: string;
-      mediaUrl: string;
-      thumbnailUrl: string | null;
-      client: string | null;
-      date: string | null;
-      featured: boolean | null;
-    }> = [
-      { title: "Corporate Branding Project", description: "Full brand identity for tech company", category: "design", type: "image", mediaUrl: "/api/placeholder/600/400", thumbnailUrl: null, client: "Tech Solutions SA", date: "2024", featured: true },
-      { title: "Wedding Highlight Film", description: "Beautiful wedding videography", category: "videography", type: "video", mediaUrl: "/api/placeholder/600/400", thumbnailUrl: null, client: "Private Client", date: "2024", featured: true },
-      { title: "Product Photography", description: "E-commerce product shots", category: "photography", type: "image", mediaUrl: "/api/placeholder/600/400", thumbnailUrl: null, client: "Bloom Boutique", date: "2024", featured: true },
-      { title: "Event Coverage", description: "Corporate event photography", category: "photography", type: "image", mediaUrl: "/api/placeholder/600/400", thumbnailUrl: null, client: "Urban Events", date: "2024", featured: false },
-      { title: "Social Media Campaign", description: "Restaurant social media content", category: "marketing", type: "image", mediaUrl: "/api/placeholder/600/400", thumbnailUrl: null, client: "Local Restaurant", date: "2024", featured: false },
-      { title: "Large Format Banner", description: "Exhibition banner design and print", category: "printing", type: "image", mediaUrl: "/api/placeholder/600/400", thumbnailUrl: null, client: "Corporate Client", date: "2024", featured: true }
-    ];
-
-    portfolioData.forEach(p => {
-      const id = randomUUID();
-      this.portfolioItems.set(id, { ...p, id });
-    });
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { 
-      id,
-      email: insertUser.email,
-      password: insertUser.password,
-      name: insertUser.name,
-      phone: insertUser.phone ?? null,
-      role: insertUser.role ?? "customer",
-      createdAt: new Date()
-    };
-    this.users.set(id, user);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUserRole(id: string, role: string): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
   async getProducts(): Promise<Product[]> {
-    return Array.from(this.products.values()).filter(p => p.isActive);
+    return db.select().from(products).where(eq(products.isActive, true));
+  }
+
+  async getAllProducts(): Promise<Product[]> {
+    return db.select().from(products).orderBy(desc(products.createdAt));
   }
 
   async getProduct(id: string): Promise<Product | undefined> {
-    return this.products.get(id);
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product;
   }
 
   async getProductsByCategory(category: string): Promise<Product[]> {
-    return Array.from(this.products.values()).filter(p => p.category === category && p.isActive);
+    return db.select().from(products).where(and(eq(products.category, category), eq(products.isActive, true)));
   }
 
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
-    const id = randomUUID();
-    const product: Product = { 
-      id,
-      name: insertProduct.name,
-      description: insertProduct.description,
-      category: insertProduct.category,
-      basePrice: insertProduct.basePrice,
-      image: insertProduct.image ?? null,
-      options: (insertProduct.options as ProductOption[] | undefined) ?? null,
-      isActive: insertProduct.isActive ?? true
-    };
-    this.products.set(id, product);
+    const [product] = await db.insert(products).values(insertProduct).returning();
     return product;
   }
 
   async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product | undefined> {
-    const product = this.products.get(id);
-    if (!product) return undefined;
-    const updated: Product = { 
-      ...product, 
-      ...updates,
-      options: updates.options !== undefined ? (updates.options as ProductOption[] | undefined) ?? null : product.options
-    };
-    this.products.set(id, updated);
-    return updated;
+    const [product] = await db
+      .update(products)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
+    return product;
   }
 
   async deleteProduct(id: string): Promise<boolean> {
-    return this.products.delete(id);
+    const result = await db.delete(products).where(eq(products.id, id));
+    return true;
   }
 
   async getServices(): Promise<Service[]> {
-    return Array.from(this.services.values()).filter(s => s.isActive);
+    return db.select().from(services).where(eq(services.isActive, true));
+  }
+
+  async getAllServices(): Promise<Service[]> {
+    return db.select().from(services).orderBy(desc(services.createdAt));
   }
 
   async getService(id: string): Promise<Service | undefined> {
-    return this.services.get(id);
-  }
-
-  async getServicesByCategory(category: string): Promise<Service[]> {
-    return Array.from(this.services.values()).filter(s => s.category === category && s.isActive);
-  }
-
-  async createService(insertService: InsertService): Promise<Service> {
-    const id = randomUUID();
-    const service: Service = { 
-      id,
-      name: insertService.name,
-      description: insertService.description,
-      category: insertService.category,
-      startingPrice: insertService.startingPrice,
-      image: insertService.image ?? null,
-      features: insertService.features ?? null,
-      isActive: insertService.isActive ?? true
-    };
-    this.services.set(id, service);
+    const [service] = await db.select().from(services).where(eq(services.id, id));
     return service;
   }
 
+  async getServicesByCategory(category: string): Promise<Service[]> {
+    return db.select().from(services).where(and(eq(services.category, category), eq(services.isActive, true)));
+  }
+
+  async createService(insertService: InsertService): Promise<Service> {
+    const [service] = await db.insert(services).values(insertService).returning();
+    return service;
+  }
+
+  async updateService(id: string, updates: Partial<InsertService>): Promise<Service | undefined> {
+    const [service] = await db
+      .update(services)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(services.id, id))
+      .returning();
+    return service;
+  }
+
+  async deleteService(id: string): Promise<boolean> {
+    await db.delete(services).where(eq(services.id, id));
+    return true;
+  }
+
   async getPortfolioItems(): Promise<PortfolioItem[]> {
-    return Array.from(this.portfolioItems.values());
+    return db.select().from(portfolioItems).orderBy(desc(portfolioItems.createdAt));
   }
 
   async getPortfolioItem(id: string): Promise<PortfolioItem | undefined> {
-    return this.portfolioItems.get(id);
+    const [item] = await db.select().from(portfolioItems).where(eq(portfolioItems.id, id));
+    return item;
   }
 
   async getPortfolioItemsByCategory(category: string): Promise<PortfolioItem[]> {
-    return Array.from(this.portfolioItems.values()).filter(p => p.category === category);
+    return db.select().from(portfolioItems).where(eq(portfolioItems.category, category));
   }
 
   async getFeaturedPortfolioItems(): Promise<PortfolioItem[]> {
-    return Array.from(this.portfolioItems.values()).filter(p => p.featured);
+    return db.select().from(portfolioItems).where(eq(portfolioItems.featured, true));
   }
 
   async createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem> {
-    const id = randomUUID();
-    const portfolioItem: PortfolioItem = { 
-      id,
-      title: item.title,
-      description: item.description ?? null,
-      category: item.category,
-      type: item.type,
-      mediaUrl: item.mediaUrl,
-      thumbnailUrl: item.thumbnailUrl ?? null,
-      client: item.client ?? null,
-      date: item.date ?? null,
-      featured: item.featured ?? false
-    };
-    this.portfolioItems.set(id, portfolioItem);
+    const [portfolioItem] = await db.insert(portfolioItems).values(item).returning();
     return portfolioItem;
   }
 
+  async updatePortfolioItem(id: string, updates: Partial<InsertPortfolioItem>): Promise<PortfolioItem | undefined> {
+    const [item] = await db
+      .update(portfolioItems)
+      .set(updates)
+      .where(eq(portfolioItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async deletePortfolioItem(id: string): Promise<boolean> {
+    await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
+    return true;
+  }
+
   async getBookings(): Promise<Booking[]> {
-    return Array.from(this.bookings.values());
+    return db.select().from(bookings).orderBy(desc(bookings.createdAt));
   }
 
   async getBooking(id: string): Promise<Booking | undefined> {
-    return this.bookings.get(id);
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
+    return booking;
   }
 
   async getBookingsByUser(userId: string): Promise<Booking[]> {
-    return Array.from(this.bookings.values()).filter(b => b.userId === userId);
+    return db.select().from(bookings).where(eq(bookings.userId, userId));
   }
 
   async createBooking(insertBooking: InsertBooking): Promise<Booking> {
-    const id = randomUUID();
-    const booking: Booking = { 
-      id,
-      userId: insertBooking.userId ?? null,
-      serviceId: insertBooking.serviceId ?? null,
-      serviceName: insertBooking.serviceName,
-      name: insertBooking.name,
-      email: insertBooking.email,
-      phone: insertBooking.phone,
-      date: insertBooking.date,
-      time: insertBooking.time,
-      notes: insertBooking.notes ?? null,
-      status: insertBooking.status ?? "pending",
-      createdAt: new Date()
-    };
-    this.bookings.set(id, booking);
+    const [booking] = await db.insert(bookings).values(insertBooking).returning();
     return booking;
   }
 
   async updateBookingStatus(id: string, status: string): Promise<Booking | undefined> {
-    const booking = this.bookings.get(id);
-    if (!booking) return undefined;
-    const updated = { ...booking, status };
-    this.bookings.set(id, updated);
-    return updated;
+    const [booking] = await db
+      .update(bookings)
+      .set({ status })
+      .where(eq(bookings.id, id))
+      .returning();
+    return booking;
+  }
+
+  async deleteBooking(id: string): Promise<boolean> {
+    await db.delete(bookings).where(eq(bookings.id, id));
+    return true;
   }
 
   async getOrders(): Promise<Order[]> {
-    return Array.from(this.orders.values());
+    return db.select().from(orders).orderBy(desc(orders.createdAt));
   }
 
   async getOrder(id: string): Promise<Order | undefined> {
-    return this.orders.get(id);
-  }
-
-  async getOrdersByUser(userId: string): Promise<Order[]> {
-    return Array.from(this.orders.values()).filter(o => o.userId === userId);
-  }
-
-  async createOrder(insertOrder: InsertOrder): Promise<Order> {
-    const id = randomUUID();
-    const order: Order = { 
-      id,
-      userId: insertOrder.userId ?? null,
-      customerName: insertOrder.customerName,
-      customerEmail: insertOrder.customerEmail,
-      customerPhone: insertOrder.customerPhone ?? null,
-      items: insertOrder.items as OrderItem[],
-      subtotal: insertOrder.subtotal,
-      deliveryFee: insertOrder.deliveryFee ?? "0",
-      total: insertOrder.total,
-      deliveryMethod: insertOrder.deliveryMethod,
-      deliveryAddress: insertOrder.deliveryAddress ?? null,
-      status: insertOrder.status ?? "pending",
-      paymentStatus: insertOrder.paymentStatus ?? "pending",
-      createdAt: new Date()
-    };
-    this.orders.set(id, order);
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
     return order;
   }
 
-  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
-    const order = this.orders.get(id);
-    if (!order) return undefined;
-    const updated = { ...order, status };
-    this.orders.set(id, updated);
-    return updated;
+  async getOrdersByUser(userId: string): Promise<Order[]> {
+    return db.select().from(orders).where(eq(orders.userId, userId));
+  }
+
+  async createOrder(insertOrder: InsertOrder): Promise<Order> {
+    const [order] = await db.insert(orders).values(insertOrder).returning();
+    return order;
+  }
+
+  async updateOrderStatus(id: string, status: string, paymentStatus?: string): Promise<Order | undefined> {
+    const updates: any = { status };
+    if (paymentStatus) {
+      updates.paymentStatus = paymentStatus;
+    }
+    const [order] = await db
+      .update(orders)
+      .set(updates)
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async deleteOrder(id: string): Promise<boolean> {
+    await db.delete(orders).where(eq(orders.id, id));
+    return true;
   }
 
   async getQuoteRequests(): Promise<QuoteRequest[]> {
-    return Array.from(this.quoteRequests.values());
+    return db.select().from(quoteRequests).orderBy(desc(quoteRequests.createdAt));
+  }
+
+  async getQuoteRequest(id: string): Promise<QuoteRequest | undefined> {
+    const [quote] = await db.select().from(quoteRequests).where(eq(quoteRequests.id, id));
+    return quote;
   }
 
   async createQuoteRequest(insertQuote: InsertQuoteRequest): Promise<QuoteRequest> {
-    const id = randomUUID();
-    const quote: QuoteRequest = { 
-      id,
-      name: insertQuote.name,
-      email: insertQuote.email,
-      phone: insertQuote.phone,
-      company: insertQuote.company ?? null,
-      serviceType: insertQuote.serviceType,
-      projectDescription: insertQuote.projectDescription,
-      budget: insertQuote.budget ?? null,
-      timeline: insertQuote.timeline ?? null,
-      status: insertQuote.status ?? "new",
-      createdAt: new Date()
-    };
-    this.quoteRequests.set(id, quote);
+    const [quote] = await db.insert(quoteRequests).values(insertQuote).returning();
     return quote;
   }
 
   async updateQuoteRequestStatus(id: string, status: string): Promise<QuoteRequest | undefined> {
-    const quote = this.quoteRequests.get(id);
-    if (!quote) return undefined;
-    const updated = { ...quote, status };
-    this.quoteRequests.set(id, updated);
-    return updated;
+    const [quote] = await db
+      .update(quoteRequests)
+      .set({ status })
+      .where(eq(quoteRequests.id, id))
+      .returning();
+    return quote;
+  }
+
+  async deleteQuoteRequest(id: string): Promise<boolean> {
+    await db.delete(quoteRequests).where(eq(quoteRequests.id, id));
+    return true;
   }
 
   async getPromotions(): Promise<Promotion[]> {
-    return Array.from(this.promotions.values());
+    return db.select().from(promotions).orderBy(desc(promotions.createdAt));
   }
 
   async getActivePromotions(): Promise<Promotion[]> {
-    return Array.from(this.promotions.values()).filter(p => p.isActive);
+    return db.select().from(promotions).where(eq(promotions.isActive, true));
   }
 
-  async createPromotion(insertPromotion: InsertPromotion): Promise<Promotion> {
-    const id = randomUUID();
-    const promotion: Promotion = { 
-      id,
-      title: insertPromotion.title,
-      description: insertPromotion.description,
-      discount: insertPromotion.discount ?? null,
-      validUntil: insertPromotion.validUntil ?? null,
-      image: insertPromotion.image ?? null,
-      isActive: insertPromotion.isActive ?? true
-    };
-    this.promotions.set(id, promotion);
+  async getPromotion(id: string): Promise<Promotion | undefined> {
+    const [promotion] = await db.select().from(promotions).where(eq(promotions.id, id));
     return promotion;
   }
 
+  async createPromotion(insertPromotion: InsertPromotion): Promise<Promotion> {
+    const [promotion] = await db.insert(promotions).values(insertPromotion).returning();
+    return promotion;
+  }
+
+  async updatePromotion(id: string, updates: Partial<InsertPromotion>): Promise<Promotion | undefined> {
+    const [promotion] = await db
+      .update(promotions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(promotions.id, id))
+      .returning();
+    return promotion;
+  }
+
+  async deletePromotion(id: string): Promise<boolean> {
+    await db.delete(promotions).where(eq(promotions.id, id));
+    return true;
+  }
+
   async getTestimonials(): Promise<Testimonial[]> {
-    return Array.from(this.testimonials.values());
+    return db.select().from(testimonials).orderBy(desc(testimonials.createdAt));
   }
 
   async getFeaturedTestimonials(): Promise<Testimonial[]> {
-    return Array.from(this.testimonials.values()).filter(t => t.featured);
+    return db.select().from(testimonials).where(eq(testimonials.featured, true));
   }
 
-  async createTestimonial(insertTestimonial: InsertTestimonial): Promise<Testimonial> {
-    const id = randomUUID();
-    const testimonial: Testimonial = { 
-      id,
-      name: insertTestimonial.name,
-      company: insertTestimonial.company ?? null,
-      content: insertTestimonial.content,
-      rating: insertTestimonial.rating ?? 5,
-      image: insertTestimonial.image ?? null,
-      featured: insertTestimonial.featured ?? false
-    };
-    this.testimonials.set(id, testimonial);
+  async getTestimonial(id: string): Promise<Testimonial | undefined> {
+    const [testimonial] = await db.select().from(testimonials).where(eq(testimonials.id, id));
     return testimonial;
   }
 
+  async createTestimonial(insertTestimonial: InsertTestimonial): Promise<Testimonial> {
+    const [testimonial] = await db.insert(testimonials).values(insertTestimonial).returning();
+    return testimonial;
+  }
+
+  async updateTestimonial(id: string, updates: Partial<InsertTestimonial>): Promise<Testimonial | undefined> {
+    const [testimonial] = await db
+      .update(testimonials)
+      .set(updates)
+      .where(eq(testimonials.id, id))
+      .returning();
+    return testimonial;
+  }
+
+  async deleteTestimonial(id: string): Promise<boolean> {
+    await db.delete(testimonials).where(eq(testimonials.id, id));
+    return true;
+  }
+
   async getTeamMembers(): Promise<TeamMember[]> {
-    return Array.from(this.teamMembers.values()).sort((a, b) => (a.order || 0) - (b.order || 0));
+    return db.select().from(teamMembers).orderBy(teamMembers.order);
+  }
+
+  async getTeamMember(id: string): Promise<TeamMember | undefined> {
+    const [member] = await db.select().from(teamMembers).where(eq(teamMembers.id, id));
+    return member;
   }
 
   async createTeamMember(insertMember: InsertTeamMember): Promise<TeamMember> {
-    const id = randomUUID();
-    const member: TeamMember = { 
-      id,
-      name: insertMember.name,
-      role: insertMember.role,
-      bio: insertMember.bio ?? null,
-      image: insertMember.image ?? null,
-      experience: insertMember.experience ?? null,
-      order: insertMember.order ?? 0
-    };
-    this.teamMembers.set(id, member);
+    const [member] = await db.insert(teamMembers).values(insertMember).returning();
     return member;
+  }
+
+  async updateTeamMember(id: string, updates: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
+    const [member] = await db
+      .update(teamMembers)
+      .set(updates)
+      .where(eq(teamMembers.id, id))
+      .returning();
+    return member;
+  }
+
+  async deleteTeamMember(id: string): Promise<boolean> {
+    await db.delete(teamMembers).where(eq(teamMembers.id, id));
+    return true;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
