@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { ObjectStorageService, ObjectNotFoundError, objectStorageClient } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
 import { 
   insertBookingSchema, 
@@ -17,6 +17,20 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import crypto from "crypto";
+import multer from "multer";
+import { randomUUID } from "crypto";
+
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
@@ -127,6 +141,78 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Image upload endpoint
+  app.post('/api/upload', isAdmin, upload.single('image'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image file provided' });
+      }
+
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) {
+        return res.status(500).json({ error: 'Object storage not configured' });
+      }
+
+      const fileExtension = req.file.originalname.split('.').pop() || 'jpg';
+      const fileName = `${randomUUID()}.${fileExtension}`;
+      const objectPath = `public/uploads/${fileName}`;
+
+      const bucket = objectStorageClient.bucket(bucketId);
+      const file = bucket.file(objectPath);
+
+      await file.save(req.file.buffer, {
+        contentType: req.file.mimetype,
+        metadata: {
+          contentType: req.file.mimetype,
+        },
+      });
+
+      await file.setMetadata({
+        metadata: {
+          'custom:aclPolicy': JSON.stringify({
+            owner: 'admin',
+            visibility: 'public',
+          }),
+        },
+      });
+
+      const imageUrl = `/api/images/${fileName}`;
+      res.json({ url: imageUrl, fileName });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ error: 'Failed to upload image' });
+    }
+  });
+
+  // Serve uploaded images
+  app.get('/api/images/:fileName', async (req, res) => {
+    try {
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) {
+        return res.status(500).json({ error: 'Object storage not configured' });
+      }
+
+      const bucket = objectStorageClient.bucket(bucketId);
+      const file = bucket.file(`public/uploads/${req.params.fileName}`);
+
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ error: 'Image not found' });
+      }
+
+      const [metadata] = await file.getMetadata();
+      res.set({
+        'Content-Type': metadata.contentType || 'image/jpeg',
+        'Cache-Control': 'public, max-age=31536000',
+      });
+
+      file.createReadStream().pipe(res);
+    } catch (error) {
+      console.error('Image fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch image' });
     }
   });
 

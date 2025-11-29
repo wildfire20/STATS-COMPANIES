@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, Printer, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Printer } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
 import type { Product } from "@shared/schema";
 
 const categories = [
@@ -190,30 +191,23 @@ export default function ProductsManagement() {
                     data-testid="input-product-description"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="basePrice">Base Price (R)</Label>
-                    <Input
-                      id="basePrice"
-                      type="number"
-                      step="0.01"
-                      value={formData.basePrice}
-                      onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                      required
-                      data-testid="input-product-price"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="image">Image URL (optional)</Label>
-                    <Input
-                      id="image"
-                      value={formData.image}
-                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                      placeholder="https://..."
-                      data-testid="input-product-image"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="basePrice">Base Price (R)</Label>
+                  <Input
+                    id="basePrice"
+                    type="number"
+                    step="0.01"
+                    value={formData.basePrice}
+                    onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
+                    required
+                    data-testid="input-product-price"
+                  />
                 </div>
+                <ImageUpload
+                  value={formData.image}
+                  onChange={(url) => setFormData({ ...formData, image: url })}
+                  label="Product Image"
+                />
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="isActive"

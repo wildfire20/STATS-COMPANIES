@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Pencil, Trash2, Tag, Calendar } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
 import type { Promotion } from "@shared/schema";
 
 export default function PromotionsManagement() {
@@ -187,16 +188,11 @@ export default function PromotionsManagement() {
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="image">Image URL (optional)</Label>
-                  <Input
-                    id="image"
-                    value={formData.image}
-                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                    placeholder="https://..."
-                    data-testid="input-promotion-image"
-                  />
-                </div>
+                <ImageUpload
+                  value={formData.image}
+                  onChange={(url) => setFormData({ ...formData, image: url })}
+                  label="Promotion Image"
+                />
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="isActive"

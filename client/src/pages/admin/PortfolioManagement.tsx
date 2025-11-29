@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Pencil, Trash2, Image, Star } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
 import type { PortfolioItem } from "@shared/schema";
 
 const categories = [
@@ -219,28 +220,20 @@ export default function PortfolioManagement() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="mediaUrl">Media URL</Label>
-                    <Input
-                      id="mediaUrl"
-                      value={formData.mediaUrl}
-                      onChange={(e) => setFormData({ ...formData, mediaUrl: e.target.value })}
-                      required
-                      placeholder="https://..."
-                      data-testid="input-portfolio-media"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Project Date (optional)</Label>
-                    <Input
-                      id="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      placeholder="e.g., June 2024"
-                      data-testid="input-portfolio-date"
-                    />
-                  </div>
+                <ImageUpload
+                  value={formData.mediaUrl}
+                  onChange={(url) => setFormData({ ...formData, mediaUrl: url })}
+                  label="Portfolio Image"
+                />
+                <div className="space-y-2">
+                  <Label htmlFor="date">Project Date (optional)</Label>
+                  <Input
+                    id="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    placeholder="e.g., June 2024"
+                    data-testid="input-portfolio-date"
+                  />
                 </div>
                 <div className="flex items-center space-x-2">
                   <Switch

@@ -13,13 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, Camera, Video, Megaphone } from "lucide-react";
+import { Plus, Pencil, Trash2, Camera, Video, Megaphone, Printer } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
 import type { Service } from "@shared/schema";
 
 const categories = [
-  { id: "photography", name: "Photography", icon: Camera },
-  { id: "videography", name: "Videography", icon: Video },
-  { id: "marketing", name: "Digital Marketing", icon: Megaphone },
+  { id: "Printing", name: "Printing", icon: Printer },
+  { id: "Photography", name: "Photography", icon: Camera },
+  { id: "Videography", name: "Videography", icon: Video },
+  { id: "Marketing", name: "Digital Marketing", icon: Megaphone },
 ];
 
 export default function ServicesManagement() {
@@ -136,7 +138,9 @@ export default function ServicesManagement() {
   };
 
   const getCategoryIcon = (category: string) => {
-    switch (category) {
+    const cat = category.toLowerCase();
+    switch (cat) {
+      case "printing": return Printer;
       case "photography": return Camera;
       case "videography": return Video;
       case "marketing": return Megaphone;
@@ -207,30 +211,23 @@ export default function ServicesManagement() {
                     data-testid="input-service-description"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="startingPrice">Starting Price (R)</Label>
-                    <Input
-                      id="startingPrice"
-                      type="number"
-                      step="0.01"
-                      value={formData.startingPrice}
-                      onChange={(e) => setFormData({ ...formData, startingPrice: e.target.value })}
-                      required
-                      data-testid="input-service-price"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="image">Image URL (optional)</Label>
-                    <Input
-                      id="image"
-                      value={formData.image}
-                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                      placeholder="https://..."
-                      data-testid="input-service-image"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="startingPrice">Starting Price (R)</Label>
+                  <Input
+                    id="startingPrice"
+                    type="number"
+                    step="0.01"
+                    value={formData.startingPrice}
+                    onChange={(e) => setFormData({ ...formData, startingPrice: e.target.value })}
+                    required
+                    data-testid="input-service-price"
+                  />
                 </div>
+                <ImageUpload
+                  value={formData.image}
+                  onChange={(url) => setFormData({ ...formData, image: url })}
+                  label="Service Image"
+                />
                 <div className="space-y-2">
                   <Label htmlFor="features">Features (comma-separated)</Label>
                   <Input

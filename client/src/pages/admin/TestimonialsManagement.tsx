@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Pencil, Trash2, Star, Quote } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
 import type { Testimonial } from "@shared/schema";
 
 export default function TestimonialsManagement() {
@@ -181,16 +182,11 @@ export default function TestimonialsManagement() {
                     data-testid="input-testimonial-content"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="image">Profile Image URL (optional)</Label>
-                  <Input
-                    id="image"
-                    value={formData.image}
-                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                    placeholder="https://..."
-                    data-testid="input-testimonial-image"
-                  />
-                </div>
+                <ImageUpload
+                  value={formData.image}
+                  onChange={(url) => setFormData({ ...formData, image: url })}
+                  label="Customer Photo"
+                />
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="featured"

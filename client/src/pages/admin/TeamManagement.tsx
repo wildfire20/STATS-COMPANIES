@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Pencil, Trash2, Users, User } from "lucide-react";
+import { ImageUpload } from "@/components/ImageUpload";
 import type { TeamMember } from "@shared/schema";
 
 export default function TeamManagement() {
@@ -169,27 +170,20 @@ export default function TeamManagement() {
                     data-testid="input-team-bio"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="image">Profile Image URL (optional)</Label>
-                    <Input
-                      id="image"
-                      value={formData.image}
-                      onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                      placeholder="https://..."
-                      data-testid="input-team-image"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="order">Display Order</Label>
-                    <Input
-                      id="order"
-                      type="number"
-                      value={formData.order}
-                      onChange={(e) => setFormData({ ...formData, order: e.target.value })}
-                      data-testid="input-team-order"
-                    />
-                  </div>
+                <ImageUpload
+                  value={formData.image}
+                  onChange={(url) => setFormData({ ...formData, image: url })}
+                  label="Profile Photo"
+                />
+                <div className="space-y-2">
+                  <Label htmlFor="order">Display Order</Label>
+                  <Input
+                    id="order"
+                    type="number"
+                    value={formData.order}
+                    onChange={(e) => setFormData({ ...formData, order: e.target.value })}
+                    data-testid="input-team-order"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="experience">Experience (optional)</Label>
