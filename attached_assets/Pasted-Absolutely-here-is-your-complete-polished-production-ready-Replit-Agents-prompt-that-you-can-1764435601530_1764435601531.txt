@@ -1,0 +1,260 @@
+Absolutely — here is your **complete, polished, production-ready Replit Agents prompt** that you can paste *directly into Replit* to build the full e-commerce website **using the content you downloaded from Canva + the E-Commerce Structure document you provided.**
+
+This is optimized specifically for **Replit Agents** to create a full working project.
+
+---
+
+# ✅ **REPLIT AGENT PROMPT — FULL E-COMMERCE WEBSITE BUILD**
+
+**PROJECT GOAL:**
+Build a complete, production-ready **E-Commerce Website** for a company offering **Digital Printing, Photography, Videography, and Digital Marketing** services, using the content and assets I have uploaded (logos, images, text, branding).
+
+Use the full website structure described in my document (provided below).
+Use the Canva assets I uploaded as the branding, images, and text content.
+
+---
+
+# 📁 **1. Project Setup Requirements**
+
+Build the project using:
+
+### **Tech Stack**
+
+* **Next.js 14 (App Router)**
+* **TypeScript**
+* **Tailwind CSS**
+* **ShadCN UI Components**
+* **Supabase (PostgreSQL) backend**
+* **Stripe or PayFast for payments**
+* **Recharts for admin analytics**
+* **Framer Motion for animations**
+
+### **Folder Structure**
+
+```
+/app
+/components
+/lib
+/types
+/public
+/public/images
+/public/uploads
+/public/logo
+```
+
+Use the images, logos, banners, and content I uploaded earlier.
+
+---
+
+# 🖼 **2. Use the Canva Content I Uploaded**
+
+Please use:
+
+* The **logo** in `/public/logo/`
+* All **banners**, **hero images**, **team photos**, **portfolio images** in `/public/images/`
+* The **About Us**, **Team**, **Services**, **Mission**, **Vision**, **Tagline**, and **Branding** text content I uploaded
+
+**Important:**
+Use the client’s **brand colors, fonts, and style** exactly as shown in the Canva content.
+
+---
+
+# 🧱 **3. Build All Pages Listed in My Document**
+
+Here is the structure you must implement:
+
+```
+1. Home Page
+   - Hero banner using client images
+   - Services quick links (Printing, Photography, Videography, Marketing)
+   - Portfolio sample grid
+   - Promotions & seasonal specials
+   - Testimonials
+   - CTA buttons (Order Now, Request Quote, Book a Shoot)
+
+2. About Us
+   - Company story using Canva text
+   - Mission, vision, values
+   - Team section using uploaded images and bios
+   - Why Choose Us
+
+3. Shop (E-Commerce)
+   A. Digital Printing store
+      - Business cards
+      - Flyers & brochures
+      - Posters & banners
+      - Apparel printing
+      - Stickers
+      - Branded items
+      - Photo gifts
+      - Large format
+   - Product pages with:
+       * Configurable options (size/material/finish/quantity)
+       * Artwork upload
+       * Real-time pricing
+       * Add to cart
+   - Cart + Checkout
+   - Payment gateway (Stripe/PayFast)
+   - Delivery & pickup options
+
+4. Media Services
+   - Photography Services
+   - Videography Services
+   - Marketing & Design Services
+   - CTA: Book Photographer / Videographer / Request Quote
+
+5. Portfolio
+   - Photo galleries
+   - Video showcase
+   - Before/after section
+   - Client success stories
+
+6. Quote & Bookings
+   - Multi-step quote form
+   - Booking calendar for shoots
+   - Project brief forms for marketing
+
+7. Promotions Page
+   - Announcements
+   - Discounts
+   - Seasonal packages
+
+8. Blog / Resources
+   - Blog list
+   - Blog post pages with SEO metadata
+   - Categories
+
+9. Customer Dashboard
+   - Order history
+   - Track orders
+   - Upload files
+   - Download invoices
+   - Manage bookings
+   - Messaging system
+
+10. Admin Dashboard
+    - Product CRUD
+    - Pricing rules
+    - Promo codes
+    - Order processing
+    - Booking management
+    - Portfolio manager
+    - Blog CMS
+    - Announcement CMS
+    - Analytics dashboard
+
+11. Support Page
+    - WhatsApp link
+    - Email support
+    - Contact form
+
+12. Policies
+    - Privacy Policy
+    - Terms & Conditions
+    - Refund Policy
+    - Delivery Policy
+```
+
+---
+
+# 🗄 **4. Database Schema to Generate**
+
+Create database tables:
+
+* `users`
+* `products`
+* `product_variants`
+* `product_images`
+* `orders`
+* `order_items`
+* `payments`
+* `bookings`
+* `portfolio_galleries`
+* `gallery_images`
+* `blog_posts`
+* `categories`
+* `announcements`
+* `promotions`
+* `messages`
+* `files`
+* `testimonials`
+
+Use foreign keys, indexing, and strict constraints.
+
+---
+
+# 🔐 **5. Authentication**
+
+* Supabase auth (email/password)
+* Role-based access: `admin`, `customer`
+* Restrict admin pages with server protection middleware
+
+---
+
+# 🎨 **6. UI Design Requirements**
+
+* Use the Canva brand colors and typography
+* Smooth animations via Framer Motion
+* High-end modern UI
+* Responsive on all breakpoints
+* Clean admin UI with sidebar navigation
+* Use ShadCN components throughout
+* Optimize images using Next.js Image component
+
+---
+
+# 🔧 **7. Functionality Requirements**
+
+* Full e-commerce flow
+* Booking scheduler
+* Product configurator
+* Live pricing calculation
+* Admin CRUD system
+* Upload artwork via drag and drop
+* Email notifications
+* SEO (OpenGraph, meta tags, sitemap)
+
+---
+
+# 📦 **8. Final Output**
+
+When completed, provide:
+
+### ✔ The full codebase
+
+### ✔ All pages and components
+
+### ✔ All backend API routes
+
+### ✔ Database schema
+
+### ✔ Admin dashboard
+
+### ✔ Customer dashboard
+
+### ✔ Working checkout
+
+### ✔ Working bookings
+
+### ✔ Integration with uploaded Canva content
+
+### ✔ A ZIP file download of the entire project
+
+---
+
+# 🧨 **FINAL INSTRUCTION**
+
+**Begin by scanning all files I uploaded.
+Use them as the content for the website.
+Then generate the full project automatically.**
+
+---
+
+If you want, I can also create:
+
+🔥 A Replit prompt for ONLY the admin dashboard
+🔥 A Replit prompt for ONLY the shop/e-commerce
+🔥 A Replit prompt for ONLY the bookings
+🔥 A Replit prompt for ONLY frontend pages
+
+Just tell me.
