@@ -85,8 +85,17 @@ export default function Services() {
                       return (
                         <Card key={service.id} className="flex flex-col hover-elevate" data-testid={`card-service-${service.id}`}>
                           <CardHeader>
-                            <div className="aspect-video bg-muted rounded-md flex items-center justify-center mb-4">
-                              <Icon className="h-12 w-12 text-muted-foreground/30" />
+                            <div className="aspect-video bg-muted rounded-md flex items-center justify-center mb-4 overflow-hidden">
+                              {service.image ? (
+                                <img 
+                                  src={service.image} 
+                                  alt={service.name}
+                                  className="w-full h-full object-cover"
+                                  data-testid={`img-service-${service.id}`}
+                                />
+                              ) : (
+                                <Icon className="h-12 w-12 text-muted-foreground/30" />
+                              )}
                             </div>
                             <div className="flex items-start justify-between gap-2">
                               <div>

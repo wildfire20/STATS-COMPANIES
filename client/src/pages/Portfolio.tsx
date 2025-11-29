@@ -93,12 +93,21 @@ export default function Portfolio() {
                         onClick={() => setSelectedItem(item)}
                         data-testid={`card-portfolio-${item.id}`}
                       >
-                        <div className="aspect-square bg-muted relative">
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <Icon className="h-16 w-16 text-muted-foreground/20" />
-                          </div>
+                        <div className="aspect-square bg-muted relative overflow-hidden">
+                          {(item.thumbnailUrl || item.mediaUrl) ? (
+                            <img 
+                              src={item.thumbnailUrl || item.mediaUrl} 
+                              alt={item.title}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              data-testid={`img-portfolio-${item.id}`}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Icon className="h-16 w-16 text-muted-foreground/20" />
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                            <span className="text-sm font-medium text-primary">View Details</span>
+                            <span className="text-sm font-medium text-primary bg-background/80 px-2 py-1 rounded">View Details</span>
                           </div>
                           {item.featured && (
                             <Badge className="absolute top-3 right-3">Featured</Badge>
@@ -144,8 +153,15 @@ export default function Portfolio() {
                 <DialogTitle>{selectedItem.title}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="aspect-video bg-muted rounded-md flex items-center justify-center">
-                  {selectedItem.type === "video" ? (
+                <div className="aspect-video bg-muted rounded-md flex items-center justify-center overflow-hidden">
+                  {(selectedItem.thumbnailUrl || selectedItem.mediaUrl) ? (
+                    <img 
+                      src={selectedItem.thumbnailUrl || selectedItem.mediaUrl} 
+                      alt={selectedItem.title}
+                      className="w-full h-full object-cover"
+                      data-testid="img-portfolio-detail"
+                    />
+                  ) : selectedItem.type === "video" ? (
                     <Video className="h-20 w-20 text-muted-foreground/20" />
                   ) : (
                     <Camera className="h-20 w-20 text-muted-foreground/20" />

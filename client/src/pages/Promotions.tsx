@@ -40,12 +40,23 @@ export default function Promotions() {
             <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               {promotions.map((promo) => (
                 <Card key={promo.id} className="overflow-hidden hover-elevate" data-testid={`card-promo-${promo.id}`}>
-                  <div className="bg-primary/10 p-4">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      <span className="text-sm font-medium text-primary">Special Offer</span>
+                  {promo.image ? (
+                    <div className="aspect-video bg-muted overflow-hidden">
+                      <img 
+                        src={promo.image} 
+                        alt={promo.title}
+                        className="w-full h-full object-cover"
+                        data-testid={`img-promo-${promo.id}`}
+                      />
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-primary/10 p-4">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-medium text-primary">Special Offer</span>
+                      </div>
+                    </div>
+                  )}
                   <CardHeader>
                     <div className="flex items-start justify-between gap-4">
                       <CardTitle className="text-xl">{promo.title}</CardTitle>

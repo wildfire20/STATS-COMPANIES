@@ -91,8 +91,17 @@ export default function Shop() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product) => (
                 <Card key={product.id} className="overflow-hidden hover-elevate group cursor-pointer" data-testid={`card-product-${product.id}`}>
-                  <div className="aspect-square bg-gradient-to-br from-blue-100 to-blue-50 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center relative">
-                    <Printer className="h-20 w-20 text-primary/20 group-hover:scale-110 transition-transform" />
+                  <div className="aspect-square bg-gradient-to-br from-blue-100 to-blue-50 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center relative overflow-hidden">
+                    {product.image ? (
+                      <img 
+                        src={product.image} 
+                        alt={product.name}
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        data-testid={`img-product-${product.id}`}
+                      />
+                    ) : (
+                      <Printer className="h-20 w-20 text-primary/20 group-hover:scale-110 transition-transform" />
+                    )}
                     <Badge className="absolute top-3 left-3 bg-secondary text-white">
                       Popular
                     </Badge>

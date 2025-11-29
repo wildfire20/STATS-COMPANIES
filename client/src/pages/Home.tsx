@@ -209,8 +209,17 @@ export default function Home() {
               {products?.slice(0, 4).map((product) => (
                 <Link key={product.id} href="/shop">
                   <Card className="overflow-hidden hover-elevate group cursor-pointer" data-testid={`card-product-${product.id}`}>
-                    <div className="aspect-square bg-gradient-to-br from-blue-100 to-blue-50 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center relative">
-                      <Printer className="h-16 w-16 text-primary/30" />
+                    <div className="aspect-square bg-gradient-to-br from-blue-100 to-blue-50 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center relative overflow-hidden">
+                      {product.image ? (
+                        <img 
+                          src={product.image} 
+                          alt={product.name}
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          data-testid={`img-product-${product.id}`}
+                        />
+                      ) : (
+                        <Printer className="h-16 w-16 text-primary/30" />
+                      )}
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-semibold mb-1">{product.name}</h3>
