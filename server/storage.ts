@@ -14,6 +14,7 @@ import {
   orderStatusHistory, type OrderStatusHistory, type InsertOrderStatusHistory,
   notifications, type Notification, type InsertNotification,
   cartItems, type CartItem, type InsertCartItem,
+  paymentSettings, type PaymentSetting, type InsertPaymentSetting,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull } from "drizzle-orm";
@@ -128,6 +129,14 @@ export interface IStorage {
   removeCartItem(id: string): Promise<boolean>;
   clearCart(userId?: string, sessionId?: string): Promise<boolean>;
   getCartTotal(userId?: string, sessionId?: string): Promise<{ subtotal: number; itemCount: number }>;
+  
+  // Payment settings operations
+  getPaymentSettings(): Promise<PaymentSetting[]>;
+  getActivePaymentSettings(): Promise<PaymentSetting[]>;
+  getPaymentSetting(id: string): Promise<PaymentSetting | undefined>;
+  createPaymentSetting(setting: InsertPaymentSetting): Promise<PaymentSetting>;
+  updatePaymentSetting(id: string, setting: Partial<InsertPaymentSetting>): Promise<PaymentSetting | undefined>;
+  deletePaymentSetting(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -643,6 +652,41 @@ export class DatabaseStorage implements IStorage {
     const subtotal = items.reduce((sum, item) => sum + parseFloat(item.totalPrice), 0);
     const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
     return { subtotal, itemCount };
+  }
+
+  // Payment settings operations
+  async getPaymentSettings(): Promise<PaymentSetting[]> {
+    return db.select().from(paymentSettings).orderBy(paymentSettings.displayOrder);
+  }
+
+  async getActivePaymentSettings(): Promise<PaymentSetting[]> {
+    return db.select().from(paymentSettings)
+      .where(eq(paymentSettings.isActive, true))
+      .orderBy(paymentSettings.displayOrder);
+  }
+
+  async getPaymentSetting(id: string): Promise<PaymentSetting | undefined> {
+    const [setting] = await db.select().from(paymentSettings).where(eq(paymentSettings.id, id));
+    return setting;
+  }
+
+  async createPaymentSetting(setting: InsertPaymentSetting): Promise<PaymentSetting> {
+    const [paymentSetting] = await db.insert(paymentSettings).values(setting).returning();
+    return paymentSetting;
+  }
+
+  async updatePaymentSetting(id: string, updates: Partial<InsertPaymentSetting>): Promise<PaymentSetting | undefined> {
+    const [setting] = await db
+      .update(paymentSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(paymentSettings.id, id))
+      .returning();
+    return setting;
+  }
+
+  async deletePaymentSetting(id: string): Promise<boolean> {
+    await db.delete(paymentSettings).where(eq(paymentSettings.id, id));
+    return true;
   }
 }
 

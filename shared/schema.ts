@@ -370,3 +370,40 @@ export const insertCartItemSchema = createInsertSchema(cartItems).omit({
 
 export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
 export type CartItem = typeof cartItems.$inferSelect;
+
+// Payment settings table for admin-configurable payment methods
+export const paymentSettings = pgTable("payment_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  methodType: varchar("method_type").notNull(), // bank_transfer, pay_on_delivery, stripe, payfast
+  name: text("name").notNull(),
+  description: text("description"),
+  instructions: text("instructions"), // Instructions shown to customer during checkout
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
+  // Bank transfer details
+  bankName: varchar("bank_name"),
+  accountName: varchar("account_name"),
+  accountNumber: varchar("account_number"),
+  branchCode: varchar("branch_code"),
+  swiftCode: varchar("swift_code"),
+  reference: text("reference"), // e.g., "Use order number as reference"
+  // Online payment gateway settings
+  gatewayEnabled: boolean("gateway_enabled").default(false),
+  gatewayTestMode: boolean("gateway_test_mode").default(true),
+  // Processing fee settings
+  processingFeeType: varchar("processing_fee_type"), // percentage, fixed, none
+  processingFeeValue: decimal("processing_fee_value", { precision: 10, scale: 2 }),
+  // Display order
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPaymentSettingSchema = createInsertSchema(paymentSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPaymentSetting = z.infer<typeof insertPaymentSettingSchema>;
+export type PaymentSetting = typeof paymentSettings.$inferSelect;

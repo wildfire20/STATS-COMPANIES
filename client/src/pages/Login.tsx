@@ -329,6 +329,13 @@ export default function Login() {
                 <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
                   <FormField
                     control={loginForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <input type="hidden" {...field} />
+                    )}
+                  />
+                  <FormField
+                    control={loginForm.control}
                     name="password"
                     render={({ field }) => (
                       <FormItem>
