@@ -27,6 +27,13 @@ import PortfolioManagement from "@/pages/admin/PortfolioManagement";
 import TestimonialsManagement from "@/pages/admin/TestimonialsManagement";
 import TeamManagement from "@/pages/admin/TeamManagement";
 
+import ClientDashboard from "@/pages/client/Dashboard";
+import ClientOrders from "@/pages/client/Orders";
+import ClientBookings from "@/pages/client/Bookings";
+import ClientInvoices from "@/pages/client/Invoices";
+import ClientProfile from "@/pages/client/Profile";
+import ClientAddresses from "@/pages/client/Addresses";
+
 function Router() {
   return (
     <Switch>
@@ -49,6 +56,14 @@ function Router() {
       <Route path="/admin/portfolio" component={PortfolioManagement} />
       <Route path="/admin/testimonials" component={TestimonialsManagement} />
       <Route path="/admin/team" component={TeamManagement} />
+
+      <Route path="/dashboard" component={ClientDashboard} />
+      <Route path="/dashboard/orders/:id" component={ClientOrders} />
+      <Route path="/dashboard/orders" component={ClientOrders} />
+      <Route path="/dashboard/bookings" component={ClientBookings} />
+      <Route path="/dashboard/invoices" component={ClientInvoices} />
+      <Route path="/dashboard/profile" component={ClientProfile} />
+      <Route path="/dashboard/addresses" component={ClientAddresses} />
       
       <Route component={NotFound} />
     </Switch>
@@ -74,6 +89,15 @@ function App() {
         <Switch>
           <Route path="/login" component={Login} />
           <Route path="/admin/:rest*">
+            {() => <Router />}
+          </Route>
+          <Route path="/admin">
+            {() => <Router />}
+          </Route>
+          <Route path="/dashboard/:rest*">
+            {() => <Router />}
+          </Route>
+          <Route path="/dashboard">
             {() => <Router />}
           </Route>
           <Route>

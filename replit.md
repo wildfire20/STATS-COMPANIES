@@ -30,13 +30,25 @@ A complete e-commerce website for STATS Companies, a digital printing, photograp
 │   │   │   ├── Portfolio.tsx
 │   │   │   ├── Bookings.tsx
 │   │   │   ├── Quote.tsx
-│   │   │   └── Promotions.tsx
+│   │   │   ├── Promotions.tsx
+│   │   │   ├── admin/      # Admin dashboard pages
+│   │   │   │   ├── Dashboard.tsx
+│   │   │   │   ├── AdminLayout.tsx
+│   │   │   │   └── ...Management.tsx
+│   │   │   └── client/     # Client account pages
+│   │   │       ├── ClientLayout.tsx
+│   │   │       ├── Dashboard.tsx
+│   │   │       ├── Orders.tsx
+│   │   │       ├── Bookings.tsx
+│   │   │       ├── Invoices.tsx
+│   │   │       ├── Profile.tsx
+│   │   │       └── Addresses.tsx
 │   │   ├── lib/           # Utilities and query client
 │   │   └── hooks/         # Custom hooks
 ├── server/
 │   ├── index.ts           # Server entry point
 │   ├── routes.ts          # API routes
-│   └── storage.ts         # In-memory data storage
+│   └── storage.ts         # Database storage interface
 ├── shared/
 │   └── schema.ts          # Data models and types
 └── design_guidelines.md   # Brand styling guide
@@ -96,7 +108,41 @@ All admin forms support direct image uploads from device:
 - Fallback to URL input for external images
 - Files stored in Replit Object Storage with public URLs
 
+## Client Dashboard
+Complete client account dashboard accessible at `/dashboard` for registered customers:
+
+### Client Dashboard Pages
+1. **Dashboard** - Overview with KPIs (total spent, orders, bookings, invoices)
+2. **My Orders** - Order list with filtering, order details with tracking status
+3. **Bookings** - View upcoming and past service appointments
+4. **Invoices** - Invoice list with download capability
+5. **Profile** - Edit personal information, notification preferences
+6. **Addresses** - Manage delivery and billing addresses
+
+### Authentication & Routing
+- **Registration:** Email, password, phone (optional), marketing opt-in
+- **Login Redirect:** 
+  - Admin users → /admin
+  - Customer users → /dashboard (or original destination if deep-linked)
+- **Protected Routes:** All /dashboard/* routes require authentication
+- **Deep Linking:** Unauthenticated deep links redirect to login with return URL
+
+### Client API Endpoints
+- `GET /api/client/profile` - Get user profile
+- `PUT /api/client/profile` - Update user profile
+- `GET /api/client/stats` - Get client statistics
+- `GET /api/client/orders` - Get client orders
+- `GET /api/client/orders/:id` - Get order details
+- `GET /api/client/bookings` - Get client bookings
+- `GET /api/client/invoices` - Get client invoices
+- `GET/POST/PUT/DELETE /api/client/addresses` - Address CRUD
+- `PUT /api/client/addresses/:id/default` - Set default address
+
 ## Recent Changes
+- **Client Dashboard** - Added complete client account system with 6 pages (Dashboard, Orders, Bookings, Invoices, Profile, Addresses)
+- **Enhanced Registration** - Added phone number field and marketing opt-in to registration form
+- **Role-based Redirect** - Admin users redirect to /admin, customers to /dashboard after login
+- **Deep Link Support** - Protected routes preserve original destination for customers
 - Added comprehensive admin dashboard with 10 management pages
 - Implemented image upload system using Replit Object Storage
 - Added dual authentication (Replit Auth + local login)

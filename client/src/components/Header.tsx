@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, ShoppingCart, Search, User, LogOut, Settings, X } from "lucide-react";
+import { Menu, ShoppingCart, Search, User, LogOut, Settings, X, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import logoImage from "@assets/states company logo_1764435536382.jpg";
@@ -155,12 +155,28 @@ export function Header() {
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
                 <DropdownMenuSeparator />
-                {isAdmin && (
+                {isAdmin ? (
                   <>
                     <DropdownMenuItem asChild>
                       <Link href="/admin" className="cursor-pointer" data-testid="link-admin-dashboard">
                         <Settings className="mr-2 h-4 w-4" />
                         Admin Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer" data-testid="link-my-account">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        My Account
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/orders" className="cursor-pointer" data-testid="link-my-orders">
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        My Orders
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -292,7 +308,7 @@ export function Header() {
                           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                         </div>
                       </div>
-                      {isAdmin && (
+                      {isAdmin ? (
                         <Button 
                           variant="outline" 
                           asChild 
@@ -302,6 +318,18 @@ export function Header() {
                           <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
                             <Settings className="h-4 w-4 mr-2" />
                             Admin Dashboard
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          asChild 
+                          className="w-full h-11 rounded-full" 
+                          data-testid="button-mobile-my-account"
+                        >
+                          <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                            <LayoutDashboard className="h-4 w-4 mr-2" />
+                            My Account
                           </Link>
                         </Button>
                       )}
