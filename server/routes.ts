@@ -1241,4 +1241,225 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ error: "Failed to mark all notifications read" });
     }
   });
+
+  // =====================================================
+  // CART API ROUTES
+  // =====================================================
+
+  app.get("/api/cart", async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const sessionId = req.sessionID;
+      
+      const items = await storage.getCartItems(userId || undefined, !userId ? sessionId : undefined);
+      const total = await storage.getCartTotal(userId || undefined, !userId ? sessionId : undefined);
+      
+      res.json({ items, ...total });
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+      res.status(500).json({ error: "Failed to fetch cart" });
+    }
+  });
+
+  app.post("/api/cart", async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const sessionId = req.sessionID;
+      
+      const { productId, productName, productImage, quantity, options, unitPrice } = req.body;
+      
+      if (!productId || !productName || !unitPrice || !quantity) {
+        return res.status(400).json({ error: "Product ID, name, unit price, and quantity are required" });
+      }
+
+      const totalPrice = (parseFloat(unitPrice) * parseInt(quantity)).toFixed(2);
+
+      const cartItem = await storage.addCartItem({
+        userId: userId || null,
+        sessionId: !userId ? sessionId : null,
+        productId,
+        productName,
+        productImage,
+        quantity: parseInt(quantity),
+        options: options || {},
+        unitPrice,
+        totalPrice,
+      });
+
+      const items = await storage.getCartItems(userId || undefined, !userId ? sessionId : undefined);
+      const total = await storage.getCartTotal(userId || undefined, !userId ? sessionId : undefined);
+
+      res.status(201).json({ item: cartItem, items, ...total });
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      res.status(500).json({ error: "Failed to add item to cart" });
+    }
+  });
+
+  app.patch("/api/cart/:id", async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const sessionId = req.sessionID;
+      
+      const { quantity } = req.body;
+      
+      if (!quantity || quantity < 1) {
+        return res.status(400).json({ error: "Valid quantity is required" });
+      }
+
+      const cartItem = await storage.getCartItem(req.params.id);
+      if (!cartItem) {
+        return res.status(404).json({ error: "Cart item not found" });
+      }
+
+      if ((userId && cartItem.userId !== userId) || (!userId && cartItem.sessionId !== sessionId)) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      const totalPrice = (parseFloat(cartItem.unitPrice) * parseInt(quantity)).toFixed(2);
+      
+      const updatedItem = await storage.updateCartItem(req.params.id, {
+        quantity: parseInt(quantity),
+        totalPrice,
+      });
+
+      const items = await storage.getCartItems(userId || undefined, !userId ? sessionId : undefined);
+      const total = await storage.getCartTotal(userId || undefined, !userId ? sessionId : undefined);
+
+      res.json({ item: updatedItem, items, ...total });
+    } catch (error) {
+      console.error("Error updating cart item:", error);
+      res.status(500).json({ error: "Failed to update cart item" });
+    }
+  });
+
+  app.delete("/api/cart/:id", async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const sessionId = req.sessionID;
+      
+      const cartItem = await storage.getCartItem(req.params.id);
+      if (!cartItem) {
+        return res.status(404).json({ error: "Cart item not found" });
+      }
+
+      if ((userId && cartItem.userId !== userId) || (!userId && cartItem.sessionId !== sessionId)) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      await storage.removeCartItem(req.params.id);
+
+      const items = await storage.getCartItems(userId || undefined, !userId ? sessionId : undefined);
+      const total = await storage.getCartTotal(userId || undefined, !userId ? sessionId : undefined);
+
+      res.json({ success: true, items, ...total });
+    } catch (error) {
+      console.error("Error removing cart item:", error);
+      res.status(500).json({ error: "Failed to remove cart item" });
+    }
+  });
+
+  app.delete("/api/cart", async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const sessionId = req.sessionID;
+      
+      await storage.clearCart(userId || undefined, !userId ? sessionId : undefined);
+      
+      res.json({ success: true, items: [], subtotal: 0, itemCount: 0 });
+    } catch (error) {
+      console.error("Error clearing cart:", error);
+      res.status(500).json({ error: "Failed to clear cart" });
+    }
+  });
+
+  app.post("/api/orders/checkout", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required for checkout" });
+      }
+
+      const { addressId, paymentMethod, notes } = req.body;
+
+      const cartItems = await storage.getCartItems(userId);
+      if (cartItems.length === 0) {
+        return res.status(400).json({ error: "Cart is empty" });
+      }
+
+      const { subtotal } = await storage.getCartTotal(userId);
+      const tax = subtotal * 0.15;
+      const total = subtotal + tax;
+
+      const user = await storage.getUser(userId);
+      const address = addressId ? await storage.getAddress(addressId) : null;
+
+      const orderItems = cartItems.map(item => ({
+        productId: item.productId,
+        productName: item.productName,
+        productImage: item.productImage,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+        options: item.options,
+      }));
+
+      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+      const order = await storage.createOrder({
+        userId,
+        orderNumber,
+        items: orderItems,
+        subtotal: subtotal.toFixed(2),
+        tax: tax.toFixed(2),
+        total: total.toFixed(2),
+        status: "pending",
+        paymentStatus: paymentMethod === "pay_on_delivery" ? "pending" : "pending",
+        paymentMethod: paymentMethod || "bank_transfer",
+        shippingAddress: address ? `${address.street}, ${address.city}, ${address.province}, ${address.postalCode}` : null,
+        customerName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : null,
+        customerEmail: user?.email || null,
+        customerPhone: user?.phone || null,
+        notes,
+      });
+
+      await storage.addOrderStatusHistory({
+        orderId: order.id,
+        status: "pending",
+        note: "Order placed successfully",
+        updatedBy: userId,
+      });
+
+      const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+      await storage.createInvoice({
+        orderId: order.id,
+        userId,
+        invoiceNumber,
+        subtotal: subtotal.toFixed(2),
+        tax: tax.toFixed(2),
+        total: total.toFixed(2),
+        status: "issued",
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+
+      await storage.createNotification({
+        userId,
+        type: "order",
+        title: "Order Placed Successfully",
+        message: `Your order ${orderNumber} has been placed and is being processed.`,
+        data: { orderId: order.id, orderNumber },
+      });
+
+      await storage.clearCart(userId);
+
+      res.status(201).json({
+        success: true,
+        order,
+        message: "Order placed successfully",
+      });
+    } catch (error) {
+      console.error("Checkout error:", error);
+      res.status(500).json({ error: "Checkout failed" });
+    }
+  });
 }
