@@ -15,7 +15,8 @@ import {
   Star, 
   Users,
   LogOut,
-  ChevronLeft
+  ChevronLeft,
+  CreditCard
 } from "lucide-react";
 
 const adminNavItems = [
@@ -29,6 +30,7 @@ const adminNavItems = [
   { href: "/admin/portfolio", label: "Portfolio", icon: Image },
   { href: "/admin/testimonials", label: "Testimonials", icon: Star },
   { href: "/admin/team", label: "Team", icon: Users },
+  { href: "/admin/payments", label: "Payments", icon: CreditCard },
 ];
 
 interface AdminLayoutProps {
