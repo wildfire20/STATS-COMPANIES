@@ -76,6 +76,10 @@ A complete e-commerce website for STATS Companies, a digital printing, photograp
 - `GET/POST /api/promotions` - Promotional offers
 - `GET/POST /api/testimonials` - Customer testimonials
 - `GET/POST /api/team` - Team members
+- `GET/POST/PUT /api/admin/payment-settings` - Payment method configuration
+- `GET/POST/PUT /api/admin/contact-settings` - Contact info configuration
+- `GET /api/payment-methods` - Public payment methods for checkout
+- `GET /api/contact-info` - Public contact info for footer/contact page
 
 ## Brand Colors
 - **Primary:** Navy Blue (#1e3a5f)
@@ -96,9 +100,28 @@ Complete admin dashboard accessible at `/admin` with the following features:
 5. **Promotions Management** - CRUD for promotional offers with image upload
 6. **Team Management** - CRUD for team members with image upload
 7. **Testimonials Management** - CRUD for customer reviews with image upload
-8. **Orders Management** - View and manage customer orders
-9. **Quotes Management** - View and respond to quote requests
-10. **Bookings Management** - View and manage session bookings
+8. **Orders Management** - View and manage customer orders with status updates
+9. **Quotes Management** - View and respond to quote requests with status tracking
+10. **Bookings Management** - View and manage session bookings with status updates
+11. **Payment Settings** - Configure payment methods (Bank Transfer, Stripe, Pay on Delivery)
+12. **Contact Settings** - Configure business contact info displayed site-wide
+
+### Contact Settings
+Admin can configure all contact information at `/admin/contact`:
+- Primary contact (email, phone, WhatsApp)
+- Physical address (street, city, province, postal code, country)
+- Business hours
+- Social media links (Facebook, Instagram, Twitter/X, LinkedIn, YouTube, TikTok)
+- Google Maps link
+
+Contact info is displayed dynamically in the site footer via `/api/contact-info` endpoint.
+
+### Payment Settings
+Admin can configure multiple payment methods at `/admin/payments`:
+- Bank Transfer (EFT) with account details
+- Pay on Delivery
+- Stripe integration for card payments
+- Processing fees and display order configuration
 
 ### Image Upload System
 All admin forms support direct image uploads from device:
