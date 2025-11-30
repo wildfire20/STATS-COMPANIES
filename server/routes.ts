@@ -856,6 +856,71 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Contact settings admin routes
+  app.get("/api/admin/contact-settings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getContactSettings();
+      res.json(settings || null);
+    } catch (error) {
+      console.error("Get contact settings error:", error);
+      res.status(500).json({ error: "Failed to fetch contact settings" });
+    }
+  });
+
+  app.post("/api/admin/contact-settings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.createContactSettings(req.body);
+      res.status(201).json(settings);
+    } catch (error) {
+      console.error("Create contact settings error:", error);
+      res.status(500).json({ error: "Failed to create contact settings" });
+    }
+  });
+
+  app.put("/api/admin/contact-settings/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.updateContactSettings(req.params.id, req.body);
+      if (!settings) {
+        return res.status(404).json({ error: "Contact settings not found" });
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error("Update contact settings error:", error);
+      res.status(500).json({ error: "Failed to update contact settings" });
+    }
+  });
+
+  // Public endpoint to get contact info for footer/contact page
+  app.get("/api/contact-info", async (req, res) => {
+    try {
+      const settings = await storage.getContactSettings();
+      if (!settings) {
+        return res.json(null);
+      }
+      // Return public-safe contact information
+      res.json({
+        email: settings.email,
+        phone: settings.phone,
+        whatsapp: settings.whatsapp,
+        address: settings.address,
+        city: settings.city,
+        province: settings.province,
+        postalCode: settings.postalCode,
+        country: settings.country,
+        businessHours: settings.businessHours,
+        facebook: settings.facebook,
+        instagram: settings.instagram,
+        twitter: settings.twitter,
+        linkedin: settings.linkedin,
+        youtube: settings.youtube,
+        tiktok: settings.tiktok,
+        googleMapsUrl: settings.googleMapsUrl,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch contact info" });
+    }
+  });
+
   // Public endpoint for checkout to get active payment methods
   app.get("/api/payment-methods", async (req, res) => {
     try {
