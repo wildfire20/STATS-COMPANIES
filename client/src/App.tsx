@@ -31,6 +31,7 @@ import PortfolioManagement from "@/pages/admin/PortfolioManagement";
 import TestimonialsManagement from "@/pages/admin/TestimonialsManagement";
 import TeamManagement from "@/pages/admin/TeamManagement";
 import PaymentSettingsManagement from "@/pages/admin/PaymentSettingsManagement";
+import ContactSettingsManagement from "@/pages/admin/ContactSettingsManagement";
 
 import ClientDashboard from "@/pages/client/Dashboard";
 import ClientOrders from "@/pages/client/Orders";
@@ -64,6 +65,7 @@ function Router() {
       <Route path="/admin/testimonials" component={TestimonialsManagement} />
       <Route path="/admin/team" component={TeamManagement} />
       <Route path="/admin/payments" component={PaymentSettingsManagement} />
+      <Route path="/admin/contact" component={ContactSettingsManagement} />
 
       <Route path="/dashboard" component={ClientDashboard} />
       <Route path="/dashboard/orders/:id" component={ClientOrders} />
