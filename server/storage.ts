@@ -13,6 +13,7 @@ import {
   invoices, type Invoice, type InsertInvoice,
   orderStatusHistory, type OrderStatusHistory, type InsertOrderStatusHistory,
   notifications, type Notification, type InsertNotification,
+  cartItems, type CartItem, type InsertCartItem,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull } from "drizzle-orm";
@@ -118,6 +119,15 @@ export interface IStorage {
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationRead(id: string): Promise<Notification | undefined>;
   markAllNotificationsRead(userId: string): Promise<boolean>;
+  
+  // Cart operations
+  getCartItems(userId?: string, sessionId?: string): Promise<CartItem[]>;
+  getCartItem(id: string): Promise<CartItem | undefined>;
+  addCartItem(item: InsertCartItem): Promise<CartItem>;
+  updateCartItem(id: string, updates: Partial<InsertCartItem>): Promise<CartItem | undefined>;
+  removeCartItem(id: string): Promise<boolean>;
+  clearCart(userId?: string, sessionId?: string): Promise<boolean>;
+  getCartTotal(userId?: string, sessionId?: string): Promise<{ subtotal: number; itemCount: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -583,6 +593,56 @@ export class DatabaseStorage implements IStorage {
   async markAllNotificationsRead(userId: string): Promise<boolean> {
     await db.update(notifications).set({ readAt: new Date() }).where(eq(notifications.userId, userId));
     return true;
+  }
+
+  // Cart operations
+  async getCartItems(userId?: string, sessionId?: string): Promise<CartItem[]> {
+    if (userId) {
+      return db.select().from(cartItems).where(eq(cartItems.userId, userId)).orderBy(desc(cartItems.createdAt));
+    } else if (sessionId) {
+      return db.select().from(cartItems).where(eq(cartItems.sessionId, sessionId)).orderBy(desc(cartItems.createdAt));
+    }
+    return [];
+  }
+
+  async getCartItem(id: string): Promise<CartItem | undefined> {
+    const [item] = await db.select().from(cartItems).where(eq(cartItems.id, id));
+    return item;
+  }
+
+  async addCartItem(item: InsertCartItem): Promise<CartItem> {
+    const [cartItem] = await db.insert(cartItems).values(item).returning();
+    return cartItem;
+  }
+
+  async updateCartItem(id: string, updates: Partial<InsertCartItem>): Promise<CartItem | undefined> {
+    const [item] = await db
+      .update(cartItems)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(cartItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async removeCartItem(id: string): Promise<boolean> {
+    await db.delete(cartItems).where(eq(cartItems.id, id));
+    return true;
+  }
+
+  async clearCart(userId?: string, sessionId?: string): Promise<boolean> {
+    if (userId) {
+      await db.delete(cartItems).where(eq(cartItems.userId, userId));
+    } else if (sessionId) {
+      await db.delete(cartItems).where(eq(cartItems.sessionId, sessionId));
+    }
+    return true;
+  }
+
+  async getCartTotal(userId?: string, sessionId?: string): Promise<{ subtotal: number; itemCount: number }> {
+    const items = await this.getCartItems(userId, sessionId);
+    const subtotal = items.reduce((sum, item) => sum + parseFloat(item.totalPrice), 0);
+    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+    return { subtotal, itemCount };
   }
 }
 
