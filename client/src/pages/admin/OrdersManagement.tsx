@@ -23,11 +23,7 @@ export default function OrdersManagement() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status, paymentStatus }: { id: string; status: string; paymentStatus?: string }) => {
-      return apiRequest(`/api/admin/orders/${id}/status`, {
-        method: "PUT",
-        body: JSON.stringify({ status, paymentStatus }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return apiRequest("PUT", `/api/admin/orders/${id}/status`, { status, paymentStatus });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
@@ -41,7 +37,7 @@ export default function OrdersManagement() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/admin/orders/${id}`, { method: "DELETE" });
+      return apiRequest("DELETE", `/api/admin/orders/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
