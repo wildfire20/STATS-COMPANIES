@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, X, ArrowLeft, Phone } from "lucide-react";
 import { SiGoogle, SiApple } from "react-icons/si";
+import statsLogo from "@assets/states company logo_1764435536382.jpg";
 
 function MicrosoftIcon({ className }: { className?: string }) {
   return (
@@ -194,64 +195,19 @@ export default function Login() {
         <CardContent className="pt-12 pb-8 px-8">
           {step === "initial" && (
             <div className="space-y-6">
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-3">
+                <img 
+                  src={statsLogo} 
+                  alt="STATS Companies" 
+                  className="h-16 w-auto mx-auto object-contain"
+                  data-testid="img-stats-logo"
+                />
                 <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-login-title">
                   Log in or sign up
                 </h1>
                 <p className="text-muted-foreground text-sm">
                   Access your account to track orders, manage bookings, and more.
                 </p>
-              </div>
-
-              <div className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full h-12 justify-start px-4 gap-3 font-normal"
-                  onClick={() => handleSocialLogin("google")}
-                  data-testid="button-login-google"
-                >
-                  <SiGoogle className="h-5 w-5 text-[#4285F4]" />
-                  <span>Continue with Google</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full h-12 justify-start px-4 gap-3 font-normal"
-                  onClick={() => handleSocialLogin("apple")}
-                  data-testid="button-login-apple"
-                >
-                  <SiApple className="h-5 w-5" />
-                  <span>Continue with Apple</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full h-12 justify-start px-4 gap-3 font-normal"
-                  onClick={() => handleSocialLogin("microsoft")}
-                  data-testid="button-login-microsoft"
-                >
-                  <MicrosoftIcon className="h-5 w-5" />
-                  <span>Continue with Microsoft</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full h-12 justify-start px-4 gap-3 font-normal"
-                  onClick={handlePhoneLogin}
-                  data-testid="button-login-phone"
-                >
-                  <Phone className="h-5 w-5" />
-                  <span>Continue with phone</span>
-                </Button>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-3 text-muted-foreground">OR</span>
-                </div>
               </div>
 
               <Form {...emailForm}>
@@ -265,6 +221,7 @@ export default function Login() {
                           <Input
                             placeholder="Email address"
                             className="h-12"
+                            autoFocus
                             data-testid="input-email"
                             {...field}
                           />
@@ -287,11 +244,73 @@ export default function Login() {
                   </Button>
                 </form>
               </Form>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-3 text-muted-foreground">or continue with</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3">
+                <Button
+                  variant="outline"
+                  className="h-12 flex items-center justify-center"
+                  onClick={() => handleSocialLogin("google")}
+                  aria-label="Continue with Google"
+                  data-testid="button-login-google"
+                >
+                  <SiGoogle className="h-5 w-5 text-[#4285F4]" />
+                  <span className="sr-only">Google</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="h-12 flex items-center justify-center"
+                  onClick={() => handleSocialLogin("apple")}
+                  aria-label="Continue with Apple"
+                  data-testid="button-login-apple"
+                >
+                  <SiApple className="h-5 w-5" />
+                  <span className="sr-only">Apple</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="h-12 flex items-center justify-center"
+                  onClick={() => handleSocialLogin("microsoft")}
+                  aria-label="Continue with Microsoft"
+                  data-testid="button-login-microsoft"
+                >
+                  <MicrosoftIcon className="h-5 w-5" />
+                  <span className="sr-only">Microsoft</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="h-12 flex items-center justify-center"
+                  onClick={handlePhoneLogin}
+                  aria-label="Continue with phone"
+                  data-testid="button-login-phone"
+                >
+                  <Phone className="h-5 w-5" />
+                  <span className="sr-only">Phone</span>
+                </Button>
+              </div>
             </div>
           )}
 
           {step === "login" && (
             <div className="space-y-6">
+              <div className="text-center mb-2">
+                <img 
+                  src={statsLogo} 
+                  alt="STATS Companies" 
+                  className="h-12 w-auto mx-auto object-contain"
+                />
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBack}
@@ -363,6 +382,13 @@ export default function Login() {
 
           {step === "register" && (
             <div className="space-y-6">
+              <div className="text-center mb-2">
+                <img 
+                  src={statsLogo} 
+                  alt="STATS Companies" 
+                  className="h-12 w-auto mx-auto object-contain"
+                />
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBack}
