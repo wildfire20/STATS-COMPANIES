@@ -32,6 +32,18 @@ const upload = multer({
   }
 });
 
+const videoUpload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files are allowed'));
+    }
+  }
+});
+
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
@@ -227,6 +239,102 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error('Image fetch error:', error);
       res.status(500).json({ error: 'Failed to fetch image' });
+    }
+  });
+
+  // Video upload endpoint
+  app.post('/api/upload/video', isAdmin, videoUpload.single('video'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No video file provided' });
+      }
+
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) {
+        return res.status(500).json({ error: 'Object storage not configured' });
+      }
+
+      const fileExtension = req.file.originalname.split('.').pop() || 'mp4';
+      const fileName = `${randomUUID()}.${fileExtension}`;
+      const objectPath = `public/videos/${fileName}`;
+
+      const bucket = objectStorageClient.bucket(bucketId);
+      const file = bucket.file(objectPath);
+
+      await file.save(req.file.buffer, {
+        contentType: req.file.mimetype,
+        metadata: {
+          contentType: req.file.mimetype,
+        },
+      });
+
+      await file.setMetadata({
+        metadata: {
+          'custom:aclPolicy': JSON.stringify({
+            owner: 'admin',
+            visibility: 'public',
+          }),
+        },
+      });
+
+      const videoUrl = `/api/videos/${fileName}`;
+      res.json({ url: videoUrl, fileName });
+    } catch (error) {
+      console.error('Video upload error:', error);
+      res.status(500).json({ error: 'Failed to upload video' });
+    }
+  });
+
+  // Serve uploaded videos
+  app.get('/api/videos/:fileName', async (req, res) => {
+    try {
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) {
+        return res.status(500).json({ error: 'Object storage not configured' });
+      }
+
+      const bucket = objectStorageClient.bucket(bucketId);
+      const file = bucket.file(`public/videos/${req.params.fileName}`);
+
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ error: 'Video not found' });
+      }
+
+      const [metadata] = await file.getMetadata();
+      const contentType = metadata.contentType || 'video/mp4';
+      const fileSize = Number(metadata.size) || 0;
+
+      // Handle range requests for video streaming
+      const range = req.headers.range;
+      if (range) {
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunkSize = end - start + 1;
+
+        res.status(206);
+        res.set({
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize,
+          'Content-Type': contentType,
+        });
+
+        file.createReadStream({ start, end }).pipe(res);
+      } else {
+        res.set({
+          'Content-Type': contentType,
+          'Content-Length': fileSize,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=31536000',
+        });
+
+        file.createReadStream().pipe(res);
+      }
+    } catch (error) {
+      console.error('Video fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch video' });
     }
   });
 
