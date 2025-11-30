@@ -13,12 +13,28 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
-  ShoppingCart, MapPin, CreditCard, Truck, Building, 
+  ShoppingCart, MapPin, CreditCard, Truck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle, Loader2, AlertCircle,
-  Package, Plus
+  Package, Plus, Zap
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Address } from "@shared/schema";
+
+interface PaymentMethod {
+  id: string;
+  methodType: string;
+  name: string;
+  description: string | null;
+  instructions: string | null;
+  bankName: string | null;
+  accountName: string | null;
+  accountNumber: string | null;
+  branchCode: string | null;
+  reference: string | null;
+  processingFeeType: string | null;
+  processingFeeValue: string | null;
+  gatewayEnabled: boolean | null;
+}
 
 type CheckoutStep = "address" | "payment" | "review";
 
@@ -41,12 +57,22 @@ export default function Checkout() {
     enabled: !!user,
   });
 
+  const { data: paymentMethods, isLoading: paymentMethodsLoading } = useQuery<PaymentMethod[]>({
+    queryKey: ["/api/payment-methods"],
+  });
+
   useEffect(() => {
     if (addresses && addresses.length > 0 && !selectedAddressId) {
       const defaultAddress = addresses.find(a => a.isDefault);
       setSelectedAddressId(defaultAddress?.id || addresses[0].id);
     }
   }, [addresses, selectedAddressId]);
+
+  useEffect(() => {
+    if (paymentMethods && paymentMethods.length > 0 && !paymentMethod) {
+      setPaymentMethod(paymentMethods[0].methodType);
+    }
+  }, [paymentMethods, paymentMethod]);
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
@@ -79,6 +105,26 @@ export default function Checkout() {
   const formatPrice = (price: number | string) => {
     const numPrice = typeof price === "string" ? parseFloat(price) : price;
     return `R${numPrice.toFixed(2)}`;
+  };
+
+  const getPaymentMethodIcon = (methodType: string) => {
+    switch (methodType) {
+      case "bank_transfer":
+        return Building2;
+      case "pay_on_delivery":
+      case "cash_on_delivery":
+        return Truck;
+      case "stripe":
+        return CreditCard;
+      case "instant_eft":
+        return Zap;
+      default:
+        return CreditCard;
+    }
+  };
+
+  const getSelectedPaymentMethod = () => {
+    return paymentMethods?.find(pm => pm.methodType === paymentMethod);
   };
 
   const tax = subtotal * 0.15;
@@ -298,53 +344,61 @@ export default function Checkout() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <RadioGroup
-                      value={paymentMethod}
-                      onValueChange={setPaymentMethod}
-                      className="space-y-3"
-                    >
-                      <div className="relative">
-                        <RadioGroupItem
-                          value="bank_transfer"
-                          id="bank_transfer"
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor="bank_transfer"
-                          className="flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
-                          data-testid="payment-option-bank-transfer"
-                        >
-                          <Building className="h-5 w-5 mt-0.5" />
-                          <div>
-                            <span className="font-medium">Bank Transfer (EFT)</span>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Pay via bank transfer. Order will be processed once payment is confirmed.
-                            </p>
-                          </div>
-                        </Label>
+                    {paymentMethodsLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2].map(i => (
+                          <Skeleton key={i} className="h-20 w-full" />
+                        ))}
                       </div>
-
-                      <div className="relative">
-                        <RadioGroupItem
-                          value="pay_on_delivery"
-                          id="pay_on_delivery"
-                          className="peer sr-only"
-                        />
-                        <Label
-                          htmlFor="pay_on_delivery"
-                          className="flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
-                          data-testid="payment-option-cod"
-                        >
-                          <Truck className="h-5 w-5 mt-0.5" />
-                          <div>
-                            <span className="font-medium">Pay on Delivery</span>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Pay cash or card when your order arrives at your doorstep.
-                            </p>
-                          </div>
-                        </Label>
+                    ) : paymentMethods && paymentMethods.length > 0 ? (
+                      <RadioGroup
+                        value={paymentMethod}
+                        onValueChange={setPaymentMethod}
+                        className="space-y-3"
+                      >
+                        {paymentMethods.map((method) => {
+                          const Icon = getPaymentMethodIcon(method.methodType);
+                          return (
+                            <div key={method.id} className="relative">
+                              <RadioGroupItem
+                                value={method.methodType}
+                                id={method.methodType}
+                                className="peer sr-only"
+                              />
+                              <Label
+                                htmlFor={method.methodType}
+                                className="flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                                data-testid={`payment-option-${method.methodType}`}
+                              >
+                                <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="font-medium">{method.name}</span>
+                                  {method.description && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {method.description}
+                                    </p>
+                                  )}
+                                  {method.processingFeeType && method.processingFeeType !== "none" && method.processingFeeValue && (
+                                    <p className="text-xs text-amber-600 mt-1">
+                                      +{method.processingFeeType === "percentage" 
+                                        ? `${method.processingFeeValue}% processing fee` 
+                                        : `R${method.processingFeeValue} processing fee`}
+                                    </p>
+                                  )}
+                                </div>
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </RadioGroup>
+                    ) : (
+                      <div className="text-center py-8">
+                        <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                        <p className="text-muted-foreground">
+                          No payment methods available. Please contact support.
+                        </p>
                       </div>
-                    </RadioGroup>
+                    )}
 
                     <div className="space-y-2 pt-4">
                       <Label htmlFor="notes">Order Notes (Optional)</Label>
@@ -423,9 +477,29 @@ export default function Checkout() {
                         Payment Method
                       </h4>
                       <div className="bg-muted/50 p-4 rounded-lg">
-                        <p className="font-medium">
-                          {paymentMethod === "bank_transfer" ? "Bank Transfer (EFT)" : "Pay on Delivery"}
-                        </p>
+                        {(() => {
+                          const selectedMethod = getSelectedPaymentMethod();
+                          const Icon = selectedMethod ? getPaymentMethodIcon(selectedMethod.methodType) : CreditCard;
+                          return (
+                            <div className="flex items-center gap-3">
+                              <Icon className="h-5 w-5 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium">
+                                  {selectedMethod?.name || paymentMethod}
+                                </p>
+                                {selectedMethod?.methodType === "bank_transfer" && selectedMethod.bankName && (
+                                  <div className="text-sm text-muted-foreground mt-2 space-y-1">
+                                    <p>Bank: {selectedMethod.bankName}</p>
+                                    {selectedMethod.accountName && <p>Account: {selectedMethod.accountName}</p>}
+                                    {selectedMethod.accountNumber && <p>Number: {selectedMethod.accountNumber}</p>}
+                                    {selectedMethod.branchCode && <p>Branch: {selectedMethod.branchCode}</p>}
+                                    {selectedMethod.reference && <p className="text-xs text-amber-600">{selectedMethod.reference}</p>}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 
