@@ -143,7 +143,28 @@ export default function Portfolio() {
                         data-testid={`card-portfolio-${item.id}`}
                       >
                         <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/10 relative overflow-hidden img-hover-zoom">
-                          {(item.thumbnailUrl || item.mediaUrl) ? (
+                          {item.type === "video" ? (
+                            item.thumbnailUrl ? (
+                              <img 
+                                src={item.thumbnailUrl} 
+                                alt={item.title}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                data-testid={`img-portfolio-${item.id}`}
+                              />
+                            ) : item.mediaUrl ? (
+                              <video 
+                                src={item.mediaUrl}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                preload="metadata"
+                                muted
+                                data-testid={`video-portfolio-${item.id}`}
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                <Video className="h-20 w-20 text-muted-foreground/20" />
+                              </div>
+                            )
+                          ) : (item.thumbnailUrl || item.mediaUrl) ? (
                             <img 
                               src={item.thumbnailUrl || item.mediaUrl} 
                               alt={item.title}
