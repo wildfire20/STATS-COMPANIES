@@ -803,6 +803,85 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Payment settings routes (admin)
+  app.get("/api/admin/payment-settings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getPaymentSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payment settings" });
+    }
+  });
+
+  app.get("/api/admin/payment-settings/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const setting = await storage.getPaymentSetting(req.params.id);
+      if (!setting) {
+        return res.status(404).json({ error: "Payment setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payment setting" });
+    }
+  });
+
+  app.post("/api/admin/payment-settings", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const setting = await storage.createPaymentSetting(req.body);
+      res.status(201).json(setting);
+    } catch (error) {
+      console.error("Create payment setting error:", error);
+      res.status(500).json({ error: "Failed to create payment setting" });
+    }
+  });
+
+  app.put("/api/admin/payment-settings/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const setting = await storage.updatePaymentSetting(req.params.id, req.body);
+      if (!setting) {
+        return res.status(404).json({ error: "Payment setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update payment setting" });
+    }
+  });
+
+  app.delete("/api/admin/payment-settings/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deletePaymentSetting(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete payment setting" });
+    }
+  });
+
+  // Public endpoint for checkout to get active payment methods
+  app.get("/api/payment-methods", async (req, res) => {
+    try {
+      const settings = await storage.getActivePaymentSettings();
+      // Only return safe fields for public consumption
+      const publicMethods = settings.map(s => ({
+        id: s.id,
+        methodType: s.methodType,
+        name: s.name,
+        description: s.description,
+        instructions: s.instructions,
+        bankName: s.bankName,
+        accountName: s.accountName,
+        accountNumber: s.accountNumber,
+        branchCode: s.branchCode,
+        reference: s.reference,
+        processingFeeType: s.processingFeeType,
+        processingFeeValue: s.processingFeeValue,
+        gatewayEnabled: s.gatewayEnabled,
+      }));
+      res.json(publicMethods);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch payment methods" });
+    }
+  });
+
   app.get("/public-objects/:filePath(*)", async (req, res) => {
     const filePath = req.params.filePath;
     const objectStorageService = new ObjectStorageService();
