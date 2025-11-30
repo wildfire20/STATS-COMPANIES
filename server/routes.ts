@@ -121,9 +121,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     });
   });
 
-  app.get('/api/auth/check-email', async (req, res) => {
+  app.post('/api/auth/check-email', async (req, res) => {
     try {
-      const email = req.query.email as string;
+      const { email } = req.body;
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }

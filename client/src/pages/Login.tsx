@@ -46,7 +46,7 @@ type EmailFormData = z.infer<typeof emailSchema>;
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-type Step = "initial" | "login" | "register" | "phone";
+type Step = "initial" | "login" | "register";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -100,12 +100,10 @@ export default function Login() {
   };
 
   const handlePhoneLogin = () => {
-    setStep("phone");
     toast({
-      title: "Phone login",
-      description: "Phone login coming soon. Please use email or social login.",
+      title: "Coming Soon",
+      description: "Phone login is coming soon. Please use email or social login for now.",
     });
-    setTimeout(() => setStep("initial"), 2000);
   };
 
   const handleEmailContinue = async (data: EmailFormData) => {
@@ -113,7 +111,11 @@ export default function Login() {
     setEmail(data.email);
     
     try {
-      const response = await fetch(`/api/auth/check-email?email=${encodeURIComponent(data.email)}`);
+      const response = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
+      });
       const result = await response.json();
       
       if (result.exists) {
@@ -510,25 +512,6 @@ export default function Login() {
             </div>
           )}
 
-          {step === "phone" && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleBack}
-                  className="p-1 rounded-full hover-elevate text-muted-foreground hover:text-foreground transition-colors"
-                  data-testid="button-back"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
-                <h1 className="text-xl font-semibold tracking-tight">Phone login</h1>
-              </div>
-              <div className="text-center py-8 text-muted-foreground">
-                <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Phone login is coming soon.</p>
-                <p className="text-sm mt-2">Please use email or social login for now.</p>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
