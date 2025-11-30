@@ -15,6 +15,7 @@ import {
   notifications, type Notification, type InsertNotification,
   cartItems, type CartItem, type InsertCartItem,
   paymentSettings, type PaymentSetting, type InsertPaymentSetting,
+  contactSettings, type ContactSetting, type InsertContactSetting,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull } from "drizzle-orm";
@@ -137,6 +138,11 @@ export interface IStorage {
   createPaymentSetting(setting: InsertPaymentSetting): Promise<PaymentSetting>;
   updatePaymentSetting(id: string, setting: Partial<InsertPaymentSetting>): Promise<PaymentSetting | undefined>;
   deletePaymentSetting(id: string): Promise<boolean>;
+  
+  // Contact settings operations
+  getContactSettings(): Promise<ContactSetting | undefined>;
+  createContactSettings(settings: InsertContactSetting): Promise<ContactSetting>;
+  updateContactSettings(id: string, settings: Partial<InsertContactSetting>): Promise<ContactSetting | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -687,6 +693,26 @@ export class DatabaseStorage implements IStorage {
   async deletePaymentSetting(id: string): Promise<boolean> {
     await db.delete(paymentSettings).where(eq(paymentSettings.id, id));
     return true;
+  }
+
+  // Contact settings operations
+  async getContactSettings(): Promise<ContactSetting | undefined> {
+    const [settings] = await db.select().from(contactSettings);
+    return settings;
+  }
+
+  async createContactSettings(settings: InsertContactSetting): Promise<ContactSetting> {
+    const [contactSetting] = await db.insert(contactSettings).values(settings).returning();
+    return contactSetting;
+  }
+
+  async updateContactSettings(id: string, updates: Partial<InsertContactSetting>): Promise<ContactSetting | undefined> {
+    const [setting] = await db
+      .update(contactSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(contactSettings.id, id))
+      .returning();
+    return setting;
   }
 }
 

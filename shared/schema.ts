@@ -407,3 +407,40 @@ export const insertPaymentSettingSchema = createInsertSchema(paymentSettings).om
 
 export type InsertPaymentSetting = z.infer<typeof insertPaymentSettingSchema>;
 export type PaymentSetting = typeof paymentSettings.$inferSelect;
+
+// Contact settings table for admin-configurable contact information
+export const contactSettings = pgTable("contact_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Primary contact info
+  email: varchar("email"),
+  phone: varchar("phone"),
+  whatsapp: varchar("whatsapp"),
+  // Physical address
+  address: text("address"),
+  city: varchar("city"),
+  province: varchar("province"),
+  postalCode: varchar("postal_code"),
+  country: varchar("country"),
+  // Business hours
+  businessHours: text("business_hours"),
+  // Social media handles
+  facebook: varchar("facebook"),
+  instagram: varchar("instagram"),
+  twitter: varchar("twitter"),
+  linkedin: varchar("linkedin"),
+  youtube: varchar("youtube"),
+  tiktok: varchar("tiktok"),
+  // Additional info
+  googleMapsUrl: text("google_maps_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertContactSettingSchema = createInsertSchema(contactSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertContactSetting = z.infer<typeof insertContactSettingSchema>;
+export type ContactSetting = typeof contactSettings.$inferSelect;
