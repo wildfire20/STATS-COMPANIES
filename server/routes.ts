@@ -1397,30 +1397,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const orderItems = cartItems.map(item => ({
         productId: item.productId,
         productName: item.productName,
-        productImage: item.productImage,
         quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
-        options: item.options,
+        price: parseFloat(item.unitPrice),
+        options: item.options || {},
+        artworkUrl: item.productImage || undefined,
       }));
 
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+      const customerName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Customer" : "Customer";
+      const customerEmail = user?.email || "noemail@example.com";
+      const deliveryAddress = address ? `${address.street}, ${address.city}, ${address.province}, ${address.postalCode}` : undefined;
 
       const order = await storage.createOrder({
         userId,
         orderNumber,
         items: orderItems,
         subtotal: subtotal.toFixed(2),
-        tax: tax.toFixed(2),
         total: total.toFixed(2),
         status: "pending",
-        paymentStatus: paymentMethod === "pay_on_delivery" ? "pending" : "pending",
-        paymentMethod: paymentMethod || "bank_transfer",
-        shippingAddress: address ? `${address.street}, ${address.city}, ${address.province}, ${address.postalCode}` : null,
-        customerName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : null,
-        customerEmail: user?.email || null,
-        customerPhone: user?.phone || null,
-        notes,
+        paymentStatus: "pending",
+        deliveryMethod: paymentMethod === "pay_on_delivery" ? "delivery" : (address ? "delivery" : "pickup"),
+        deliveryAddress,
+        customerName,
+        customerEmail,
+        customerPhone: user?.phone || undefined,
       });
 
       await storage.addOrderStatusHistory({

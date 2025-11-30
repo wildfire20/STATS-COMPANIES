@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Printer, Search, ShoppingCart, ChevronRight, ArrowRight, Sparkles, Package } from "lucide-react";
+import { Printer, Search, ShoppingCart, ChevronRight, ArrowRight, Sparkles, Package, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Product } from "@shared/schema";
 
@@ -24,10 +25,28 @@ export default function Shop() {
   
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState("");
+  const [addingToCart, setAddingToCart] = useState<string | null>(null);
+  const { addItem } = useCart();
 
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: [selectedCategory !== "all" ? `/api/products?category=${selectedCategory}` : "/api/products"],
   });
+
+  const handleAddToCart = async (product: Product) => {
+    setAddingToCart(product.id);
+    try {
+      await addItem({
+        productId: product.id,
+        productName: product.name,
+        productImage: product.image || undefined,
+        quantity: 1,
+        options: {},
+        unitPrice: product.basePrice,
+      });
+    } finally {
+      setAddingToCart(null);
+    }
+  };
 
   const filteredProducts = products?.filter(product => 
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -161,9 +180,22 @@ export default function Shop() {
                           <span className="text-xs text-muted-foreground">From</span>
                           <span className="block text-2xl font-display font-bold text-primary">R{product.basePrice}</span>
                         </div>
-                        <Button size="sm" className="btn-premium rounded-full px-5" data-testid={`button-order-${product.id}`}>
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Order
+                        <Button 
+                          size="sm" 
+                          className="btn-premium rounded-full px-5" 
+                          data-testid={`button-order-${product.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCart(product);
+                          }}
+                          disabled={addingToCart === product.id}
+                        >
+                          {addingToCart === product.id ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                          )}
+                          {addingToCart === product.id ? "Adding..." : "Add to Cart"}
                         </Button>
                       </div>
                     </CardContent>

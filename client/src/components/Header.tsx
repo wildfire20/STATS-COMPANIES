@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, ShoppingCart, Search, User, LogOut, Settings, X, LayoutDashboard } from "lucide-react";
+import { CartButton } from "@/components/CartDrawer";
+import { Menu, Search, User, LogOut, Settings, X, LayoutDashboard, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import logoImage from "@assets/states company logo_1764435536382.jpg";
@@ -120,17 +121,7 @@ export function Header() {
           
           <ThemeToggle />
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            asChild
-            className="relative"
-            data-testid="button-cart"
-          >
-            <Link href="/shop">
-              <ShoppingCart className="h-5 w-5" />
-            </Link>
-          </Button>
+          <CartButton />
 
           {isLoading ? (
             <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
