@@ -138,7 +138,38 @@ Complete client account dashboard accessible at `/dashboard` for registered cust
 - `GET/POST/PUT/DELETE /api/client/addresses` - Address CRUD
 - `PUT /api/client/addresses/:id/default` - Set default address
 
+## Shopping Cart System
+Complete e-commerce cart functionality with the following features:
+
+### Cart Features
+- **Add to Cart** - Add products from Shop page with toast notifications
+- **Cart Drawer** - Slide-out cart preview accessible from header
+- **Cart Page** - Full cart view with quantity editing at `/cart`
+- **Cart Badge** - Item count displayed on cart icon in header
+- **Persistent Storage** - Cart items stored in database for authenticated users
+
+### Checkout Flow
+Multi-step checkout wizard at `/checkout`:
+1. **Delivery** - Choose delivery or pickup, enter address if delivering
+2. **Payment** - Select payment method (Bank Transfer, Pay on Delivery)
+3. **Review** - Order summary with item details, totals, and confirmation
+
+### Cart API Endpoints
+- `GET /api/cart` - Get cart items, subtotal, and item count
+- `POST /api/cart` - Add item to cart
+- `PATCH /api/cart/:id` - Update item quantity
+- `DELETE /api/cart/:id` - Remove item from cart
+- `DELETE /api/cart` - Clear entire cart
+- `POST /api/orders/checkout` - Create order from cart
+
+### Cart Components
+- `client/src/contexts/CartContext.tsx` - Global cart state management
+- `client/src/components/CartDrawer.tsx` - Cart drawer and cart button
+- `client/src/pages/Cart.tsx` - Full cart page
+- `client/src/pages/Checkout.tsx` - Multi-step checkout wizard
+
 ## Recent Changes
+- **Shopping Cart System** - Added complete cart and checkout functionality with cart drawer, cart page, multi-step checkout wizard, and order creation
 - **Client Dashboard** - Added complete client account system with 6 pages (Dashboard, Orders, Bookings, Invoices, Profile, Addresses)
 - **Enhanced Registration** - Added phone number field and marketing opt-in to registration form
 - **Role-based Redirect** - Admin users redirect to /admin, customers to /dashboard after login
