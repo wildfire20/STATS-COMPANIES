@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Camera, Video, Palette, Megaphone, Printer, Sparkles, Eye } from "lucide-react";
+import { Camera, Video, Palette, Megaphone, Printer, Sparkles, Eye, Play } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { PortfolioItem } from "@shared/schema";
 
@@ -161,12 +161,23 @@ export default function Portfolio() {
                               className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30"
                               whileHover={{ scale: 1.1 }}
                             >
-                              <Eye className="w-6 h-6 text-white" />
+                              {item.type === "video" ? (
+                                <Play className="w-6 h-6 text-white ml-1" />
+                              ) : (
+                                <Eye className="w-6 h-6 text-white" />
+                              )}
                             </motion.div>
                           </div>
-                          {item.featured && (
-                            <Badge className="absolute top-4 right-4 bg-secondary/90 backdrop-blur-sm shadow-lg">Featured</Badge>
-                          )}
+                          <div className="absolute top-4 right-4 flex gap-2">
+                            {item.featured && (
+                              <Badge className="bg-secondary/90 backdrop-blur-sm shadow-lg">Featured</Badge>
+                            )}
+                            {item.type === "video" && (
+                              <Badge className="bg-black/50 backdrop-blur-sm shadow-lg">
+                                <Video className="w-3 h-3 mr-1" /> Video
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         <CardContent className="p-5">
                           <h3 className="font-display font-semibold text-lg mb-2 group-hover:text-primary transition-colors" data-testid={`text-portfolio-title-${item.id}`}>{item.title}</h3>
@@ -216,7 +227,15 @@ export default function Portfolio() {
               transition={{ duration: 0.3 }}
             >
               <div className="aspect-video bg-muted relative overflow-hidden">
-                {(selectedItem.thumbnailUrl || selectedItem.mediaUrl) ? (
+                {selectedItem.type === "video" && selectedItem.mediaUrl ? (
+                  <video 
+                    src={selectedItem.mediaUrl}
+                    controls
+                    autoPlay
+                    className="w-full h-full object-contain bg-black"
+                    data-testid="video-portfolio-detail"
+                  />
+                ) : (selectedItem.thumbnailUrl || selectedItem.mediaUrl) ? (
                   <img 
                     src={selectedItem.thumbnailUrl || selectedItem.mediaUrl} 
                     alt={selectedItem.title}

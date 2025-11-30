@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Plus, Pencil, Trash2, Image, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, Image, Star, Video, Play } from "lucide-react";
 import { ImageUpload } from "@/components/ImageUpload";
+import { VideoUpload } from "@/components/VideoUpload";
 import type { PortfolioItem } from "@shared/schema";
 
 const categories = [
@@ -220,11 +221,26 @@ export default function PortfolioManagement() {
                     />
                   </div>
                 </div>
-                <ImageUpload
-                  value={formData.mediaUrl}
-                  onChange={(url) => setFormData({ ...formData, mediaUrl: url })}
-                  label="Portfolio Image"
-                />
+                {formData.type === "video" ? (
+                  <VideoUpload
+                    value={formData.mediaUrl}
+                    onChange={(url) => setFormData({ ...formData, mediaUrl: url })}
+                    label="Portfolio Video"
+                  />
+                ) : (
+                  <ImageUpload
+                    value={formData.mediaUrl}
+                    onChange={(url) => setFormData({ ...formData, mediaUrl: url })}
+                    label="Portfolio Image"
+                  />
+                )}
+                {formData.type === "video" && (
+                  <ImageUpload
+                    value={formData.thumbnailUrl}
+                    onChange={(url) => setFormData({ ...formData, thumbnailUrl: url })}
+                    label="Video Thumbnail (optional)"
+                  />
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="date">Project Date (optional)</Label>
                   <Input
@@ -272,21 +288,55 @@ export default function PortfolioManagement() {
               <Card key={item.id} className="overflow-hidden" data-testid={`card-portfolio-${item.id}`}>
                 <div className="aspect-video bg-muted relative">
                   {item.mediaUrl ? (
-                    <img 
-                      src={item.thumbnailUrl || item.mediaUrl} 
-                      alt={item.title} 
-                      className="w-full h-full object-cover"
-                    />
+                    item.type === "video" ? (
+                      <div className="relative w-full h-full">
+                        {item.thumbnailUrl ? (
+                          <img 
+                            src={item.thumbnailUrl} 
+                            alt={item.title} 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <video 
+                            src={item.mediaUrl}
+                            className="w-full h-full object-cover"
+                            preload="metadata"
+                          />
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                          <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                            <Play className="h-6 w-6 text-primary ml-1" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <img 
+                        src={item.thumbnailUrl || item.mediaUrl} 
+                        alt={item.title} 
+                        className="w-full h-full object-cover"
+                      />
+                    )
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Image className="h-8 w-8 text-muted-foreground/30" />
+                      {item.type === "video" ? (
+                        <Video className="h-8 w-8 text-muted-foreground/30" />
+                      ) : (
+                        <Image className="h-8 w-8 text-muted-foreground/30" />
+                      )}
                     </div>
                   )}
-                  {item.featured && (
-                    <Badge className="absolute top-2 left-2 bg-yellow-500">
-                      <Star className="h-3 w-3 mr-1" /> Featured
-                    </Badge>
-                  )}
+                  <div className="absolute top-2 left-2 flex gap-1">
+                    {item.featured && (
+                      <Badge className="bg-yellow-500">
+                        <Star className="h-3 w-3 mr-1" /> Featured
+                      </Badge>
+                    )}
+                    {item.type === "video" && (
+                      <Badge variant="secondary">
+                        <Video className="h-3 w-3 mr-1" /> Video
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
