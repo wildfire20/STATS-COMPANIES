@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import AdminLayout from "./AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
@@ -25,26 +27,52 @@ import {
 } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import type { ContactSetting } from "@shared/schema";
+import { insertContactSettingSchema } from "@shared/schema";
+
+const contactSettingsFormSchema = insertContactSettingSchema.extend({
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().optional(),
+  whatsapp: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  province: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+  businessHours: z.string().optional(),
+  facebook: z.string().url().optional().or(z.literal("")),
+  instagram: z.string().url().optional().or(z.literal("")),
+  twitter: z.string().url().optional().or(z.literal("")),
+  linkedin: z.string().url().optional().or(z.literal("")),
+  youtube: z.string().url().optional().or(z.literal("")),
+  tiktok: z.string().url().optional().or(z.literal("")),
+  googleMapsUrl: z.string().url().optional().or(z.literal("")),
+});
+
+type ContactSettingsFormValues = z.infer<typeof contactSettingsFormSchema>;
 
 export default function ContactSettingsManagement() {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    email: "",
-    phone: "",
-    whatsapp: "",
-    address: "",
-    city: "",
-    province: "",
-    postalCode: "",
-    country: "South Africa",
-    businessHours: "",
-    facebook: "",
-    instagram: "",
-    twitter: "",
-    linkedin: "",
-    youtube: "",
-    tiktok: "",
-    googleMapsUrl: "",
+
+  const form = useForm<ContactSettingsFormValues>({
+    resolver: zodResolver(contactSettingsFormSchema),
+    defaultValues: {
+      email: "",
+      phone: "",
+      whatsapp: "",
+      address: "",
+      city: "",
+      province: "",
+      postalCode: "",
+      country: "South Africa",
+      businessHours: "",
+      facebook: "",
+      instagram: "",
+      twitter: "",
+      linkedin: "",
+      youtube: "",
+      tiktok: "",
+      googleMapsUrl: "",
+    },
   });
 
   const { data: settings, isLoading } = useQuery<ContactSetting | null>({
@@ -53,7 +81,7 @@ export default function ContactSettingsManagement() {
 
   useEffect(() => {
     if (settings) {
-      setFormData({
+      form.reset({
         email: settings.email || "",
         phone: settings.phone || "",
         whatsapp: settings.whatsapp || "",
@@ -72,14 +100,18 @@ export default function ContactSettingsManagement() {
         googleMapsUrl: settings.googleMapsUrl || "",
       });
     }
-  }, [settings]);
+  }, [settings, form]);
 
   const saveMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: ContactSettingsFormValues) => {
+      const cleanData = Object.fromEntries(
+        Object.entries(data).map(([key, value]) => [key, value === "" ? null : value])
+      );
+      
       if (settings?.id) {
-        return apiRequest("PUT", `/api/admin/contact-settings/${settings.id}`, data);
+        return apiRequest("PUT", `/api/admin/contact-settings/${settings.id}`, cleanData);
       } else {
-        return apiRequest("POST", "/api/admin/contact-settings", data);
+        return apiRequest("POST", "/api/admin/contact-settings", cleanData);
       }
     },
     onSuccess: () => {
@@ -92,13 +124,8 @@ export default function ContactSettingsManagement() {
     },
   });
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveMutation.mutate(formData);
+  const onSubmit = (data: ContactSettingsFormValues) => {
+    saveMutation.mutate(data);
   };
 
   if (isLoading) {
@@ -115,283 +142,397 @@ export default function ContactSettingsManagement() {
 
   return (
     <AdminLayout title="Contact Settings">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Primary Contact Information
-            </CardTitle>
-            <CardDescription>
-              Set up your main contact details that customers will use to reach you.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="info@statscompanies.co.za"
-                  value={formData.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  data-testid="input-email"
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Primary Contact Information
+              </CardTitle>
+              <CardDescription>
+                Set up your main contact details that customers will use to reach you.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="info@statscompanies.co.za"
+                          data-testid="input-email"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="tel"
+                          placeholder="+27 12 345 6789"
+                          data-testid="input-phone"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+27 12 345 6789"
-                  value={formData.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                  data-testid="input-phone"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="whatsapp">WhatsApp Number</Label>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-green-600" />
-                <Input
-                  id="whatsapp"
-                  type="tel"
-                  placeholder="+27 82 123 4567"
-                  value={formData.whatsapp}
-                  onChange={(e) => handleChange("whatsapp", e.target.value)}
-                  data-testid="input-whatsapp"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Include country code for WhatsApp links to work correctly.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Physical Address
-            </CardTitle>
-            <CardDescription>
-              Your business location for customers who want to visit.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="address">Street Address</Label>
-              <Textarea
-                id="address"
-                placeholder="123 Main Street, Business Park"
-                value={formData.address}
-                onChange={(e) => handleChange("address", e.target.value)}
-                rows={2}
-                data-testid="input-address"
+              <FormField
+                control={form.control}
+                name="whatsapp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-green-600" />
+                      WhatsApp Number
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        placeholder="+27 82 123 4567"
+                        data-testid="input-whatsapp"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Include country code for WhatsApp links to work correctly.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  placeholder="Pretoria"
-                  value={formData.city}
-                  onChange={(e) => handleChange("city", e.target.value)}
-                  data-testid="input-city"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="province">Province</Label>
-                <Input
-                  id="province"
-                  placeholder="Gauteng"
-                  value={formData.province}
-                  onChange={(e) => handleChange("province", e.target.value)}
-                  data-testid="input-province"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="postalCode">Postal Code</Label>
-                <Input
-                  id="postalCode"
-                  placeholder="0001"
-                  value={formData.postalCode}
-                  onChange={(e) => handleChange("postalCode", e.target.value)}
-                  data-testid="input-postal-code"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  placeholder="South Africa"
-                  value={formData.country}
-                  onChange={(e) => handleChange("country", e.target.value)}
-                  data-testid="input-country"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="googleMapsUrl">Google Maps Link</Label>
-              <Input
-                id="googleMapsUrl"
-                type="url"
-                placeholder="https://goo.gl/maps/..."
-                value={formData.googleMapsUrl}
-                onChange={(e) => handleChange("googleMapsUrl", e.target.value)}
-                data-testid="input-google-maps"
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Physical Address
+              </CardTitle>
+              <CardDescription>
+                Your business location for customers who want to visit.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Street Address</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="123 Main Street, Business Park"
+                        rows={2}
+                        data-testid="input-address"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <p className="text-xs text-muted-foreground">
-                Paste your Google Maps share link so customers can get directions.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Business Hours
-            </CardTitle>
-            <CardDescription>
-              Let customers know when you're available.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="businessHours">Operating Hours</Label>
-              <Textarea
-                id="businessHours"
-                placeholder="Monday - Friday: 8:00 AM - 5:00 PM&#10;Saturday: 9:00 AM - 1:00 PM&#10;Sunday: Closed"
-                value={formData.businessHours}
-                onChange={(e) => handleChange("businessHours", e.target.value)}
-                rows={4}
-                data-testid="input-business-hours"
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Pretoria"
+                          data-testid="input-city"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Province</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Gauteng"
+                          data-testid="input-province"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="postalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Postal Code</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="0001"
+                          data-testid="input-postal-code"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="South Africa"
+                          data-testid="input-country"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="googleMapsUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Google Maps Link</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="url"
+                        placeholder="https://goo.gl/maps/..."
+                        data-testid="input-google-maps"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Paste your Google Maps share link so customers can get directions.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <p className="text-xs text-muted-foreground">
-                Enter each day on a new line for better readability.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Social Media
-            </CardTitle>
-            <CardDescription>
-              Connect your social media profiles to increase your online presence.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="facebook" className="flex items-center gap-2">
-                  <Facebook className="h-4 w-4 text-blue-600" />
-                  Facebook
-                </Label>
-                <Input
-                  id="facebook"
-                  type="url"
-                  placeholder="https://facebook.com/yourpage"
-                  value={formData.facebook}
-                  onChange={(e) => handleChange("facebook", e.target.value)}
-                  data-testid="input-facebook"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="instagram" className="flex items-center gap-2">
-                  <Instagram className="h-4 w-4 text-pink-600" />
-                  Instagram
-                </Label>
-                <Input
-                  id="instagram"
-                  type="url"
-                  placeholder="https://instagram.com/yourprofile"
-                  value={formData.instagram}
-                  onChange={(e) => handleChange("instagram", e.target.value)}
-                  data-testid="input-instagram"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="twitter" className="flex items-center gap-2">
-                  <Twitter className="h-4 w-4" />
-                  Twitter / X
-                </Label>
-                <Input
-                  id="twitter"
-                  type="url"
-                  placeholder="https://twitter.com/yourhandle"
-                  value={formData.twitter}
-                  onChange={(e) => handleChange("twitter", e.target.value)}
-                  data-testid="input-twitter"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="linkedin" className="flex items-center gap-2">
-                  <Linkedin className="h-4 w-4 text-blue-700" />
-                  LinkedIn
-                </Label>
-                <Input
-                  id="linkedin"
-                  type="url"
-                  placeholder="https://linkedin.com/company/yourcompany"
-                  value={formData.linkedin}
-                  onChange={(e) => handleChange("linkedin", e.target.value)}
-                  data-testid="input-linkedin"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="youtube" className="flex items-center gap-2">
-                  <Youtube className="h-4 w-4 text-red-600" />
-                  YouTube
-                </Label>
-                <Input
-                  id="youtube"
-                  type="url"
-                  placeholder="https://youtube.com/@yourchannel"
-                  value={formData.youtube}
-                  onChange={(e) => handleChange("youtube", e.target.value)}
-                  data-testid="input-youtube"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tiktok" className="flex items-center gap-2">
-                  <SiTiktok className="h-4 w-4" />
-                  TikTok
-                </Label>
-                <Input
-                  id="tiktok"
-                  type="url"
-                  placeholder="https://tiktok.com/@yourprofile"
-                  value={formData.tiktok}
-                  onChange={(e) => handleChange("tiktok", e.target.value)}
-                  data-testid="input-tiktok"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Business Hours
+              </CardTitle>
+              <CardDescription>
+                Let customers know when you're available.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="businessHours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Operating Hours</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={"Monday - Friday: 8:00 AM - 5:00 PM\nSaturday: 9:00 AM - 1:00 PM\nSunday: Closed"}
+                        rows={4}
+                        data-testid="input-business-hours"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Enter each day on a new line for better readability.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
 
-        <div className="flex justify-end">
-          <Button 
-            type="submit" 
-            size="lg" 
-            disabled={saveMutation.isPending}
-            data-testid="button-save-contact-settings"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {saveMutation.isPending ? "Saving..." : "Save Contact Settings"}
-          </Button>
-        </div>
-      </form>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Social Media
+              </CardTitle>
+              <CardDescription>
+                Connect your social media profiles to increase your online presence.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="facebook"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Facebook className="h-4 w-4 text-blue-600" />
+                        Facebook
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://facebook.com/yourpage"
+                          data-testid="input-facebook"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="instagram"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Instagram className="h-4 w-4 text-pink-600" />
+                        Instagram
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://instagram.com/yourprofile"
+                          data-testid="input-instagram"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="twitter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Twitter className="h-4 w-4" />
+                        Twitter / X
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://twitter.com/yourhandle"
+                          data-testid="input-twitter"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="linkedin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Linkedin className="h-4 w-4 text-blue-700" />
+                        LinkedIn
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://linkedin.com/company/yourcompany"
+                          data-testid="input-linkedin"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="youtube"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Youtube className="h-4 w-4 text-red-600" />
+                        YouTube
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://youtube.com/@yourchannel"
+                          data-testid="input-youtube"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tiktok"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <SiTiktok className="h-4 w-4" />
+                        TikTok
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://tiktok.com/@yourprofile"
+                          data-testid="input-tiktok"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button 
+              type="submit" 
+              size="lg" 
+              disabled={saveMutation.isPending}
+              data-testid="button-save-contact-settings"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {saveMutation.isPending ? "Saving..." : "Save Contact Settings"}
+            </Button>
+          </div>
+        </form>
+      </Form>
     </AdminLayout>
   );
 }
