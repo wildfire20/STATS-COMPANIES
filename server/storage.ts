@@ -9,9 +9,13 @@ import {
   promotions, type Promotion, type InsertPromotion,
   testimonials, type Testimonial, type InsertTestimonial,
   teamMembers, type TeamMember, type InsertTeamMember,
+  addresses, type Address, type InsertAddress,
+  invoices, type Invoice, type InsertInvoice,
+  orderStatusHistory, type OrderStatusHistory, type InsertOrderStatusHistory,
+  notifications, type Notification, type InsertNotification,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -84,6 +88,36 @@ export interface IStorage {
   createTeamMember(member: InsertTeamMember): Promise<TeamMember>;
   updateTeamMember(id: string, member: Partial<InsertTeamMember>): Promise<TeamMember | undefined>;
   deleteTeamMember(id: string): Promise<boolean>;
+  
+  // Client-specific operations
+  getUserByPhone(phone: string): Promise<User | undefined>;
+  updateUserProfile(id: string, updates: Partial<User>): Promise<User | undefined>;
+  
+  // Addresses
+  getAddressesByUser(userId: string): Promise<Address[]>;
+  getAddress(id: string): Promise<Address | undefined>;
+  createAddress(address: InsertAddress): Promise<Address>;
+  updateAddress(id: string, address: Partial<InsertAddress>): Promise<Address | undefined>;
+  deleteAddress(id: string): Promise<boolean>;
+  setDefaultAddress(userId: string, addressId: string): Promise<boolean>;
+  
+  // Invoices
+  getInvoicesByUser(userId: string): Promise<Invoice[]>;
+  getInvoicesByOrder(orderId: string): Promise<Invoice[]>;
+  getInvoice(id: string): Promise<Invoice | undefined>;
+  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
+  updateInvoice(id: string, invoice: Partial<InsertInvoice>): Promise<Invoice | undefined>;
+  
+  // Order status history
+  getOrderStatusHistory(orderId: string): Promise<OrderStatusHistory[]>;
+  addOrderStatusHistory(history: InsertOrderStatusHistory): Promise<OrderStatusHistory>;
+  
+  // Notifications
+  getNotificationsByUser(userId: string): Promise<Notification[]>;
+  getUnreadNotifications(userId: string): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationRead(id: string): Promise<Notification | undefined>;
+  markAllNotificationsRead(userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -432,6 +466,122 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTeamMember(id: string): Promise<boolean> {
     await db.delete(teamMembers).where(eq(teamMembers.id, id));
+    return true;
+  }
+
+  // Client-specific operations
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.phone, phone));
+    return user;
+  }
+
+  async updateUserProfile(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  // Addresses
+  async getAddressesByUser(userId: string): Promise<Address[]> {
+    return db.select().from(addresses).where(eq(addresses.userId, userId)).orderBy(desc(addresses.createdAt));
+  }
+
+  async getAddress(id: string): Promise<Address | undefined> {
+    const [address] = await db.select().from(addresses).where(eq(addresses.id, id));
+    return address;
+  }
+
+  async createAddress(insertAddress: InsertAddress): Promise<Address> {
+    const [address] = await db.insert(addresses).values(insertAddress).returning();
+    return address;
+  }
+
+  async updateAddress(id: string, updates: Partial<InsertAddress>): Promise<Address | undefined> {
+    const [address] = await db
+      .update(addresses)
+      .set(updates)
+      .where(eq(addresses.id, id))
+      .returning();
+    return address;
+  }
+
+  async deleteAddress(id: string): Promise<boolean> {
+    await db.delete(addresses).where(eq(addresses.id, id));
+    return true;
+  }
+
+  async setDefaultAddress(userId: string, addressId: string): Promise<boolean> {
+    await db.update(addresses).set({ isDefault: false }).where(eq(addresses.userId, userId));
+    await db.update(addresses).set({ isDefault: true }).where(eq(addresses.id, addressId));
+    return true;
+  }
+
+  // Invoices
+  async getInvoicesByUser(userId: string): Promise<Invoice[]> {
+    return db.select().from(invoices).where(eq(invoices.userId, userId)).orderBy(desc(invoices.issuedAt));
+  }
+
+  async getInvoicesByOrder(orderId: string): Promise<Invoice[]> {
+    return db.select().from(invoices).where(eq(invoices.orderId, orderId));
+  }
+
+  async getInvoice(id: string): Promise<Invoice | undefined> {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    return invoice;
+  }
+
+  async createInvoice(insertInvoice: InsertInvoice): Promise<Invoice> {
+    const [invoice] = await db.insert(invoices).values(insertInvoice).returning();
+    return invoice;
+  }
+
+  async updateInvoice(id: string, updates: Partial<InsertInvoice>): Promise<Invoice | undefined> {
+    const [invoice] = await db
+      .update(invoices)
+      .set(updates)
+      .where(eq(invoices.id, id))
+      .returning();
+    return invoice;
+  }
+
+  // Order status history
+  async getOrderStatusHistory(orderId: string): Promise<OrderStatusHistory[]> {
+    return db.select().from(orderStatusHistory).where(eq(orderStatusHistory.orderId, orderId)).orderBy(desc(orderStatusHistory.createdAt));
+  }
+
+  async addOrderStatusHistory(history: InsertOrderStatusHistory): Promise<OrderStatusHistory> {
+    const [statusHistory] = await db.insert(orderStatusHistory).values(history).returning();
+    return statusHistory;
+  }
+
+  // Notifications
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    return db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+  }
+
+  async getUnreadNotifications(userId: string): Promise<Notification[]> {
+    return db.select().from(notifications).where(and(eq(notifications.userId, userId), isNull(notifications.readAt))).orderBy(desc(notifications.createdAt));
+  }
+
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const [notification] = await db.insert(notifications).values(insertNotification).returning();
+    return notification;
+  }
+
+  async markNotificationRead(id: string): Promise<Notification | undefined> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ readAt: new Date() })
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification;
+  }
+
+  async markAllNotificationsRead(userId: string): Promise<boolean> {
+    await db.update(notifications).set({ readAt: new Date() }).where(eq(notifications.userId, userId));
     return true;
   }
 }
