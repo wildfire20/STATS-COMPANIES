@@ -611,6 +611,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/admin/orders/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const order = await storage.getOrder(req.params.id);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      const statusHistory = await storage.getOrderStatusHistory(order.id);
+      res.json({ ...order, statusHistory });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch order" });
+    }
+  });
+
   app.put("/api/admin/orders/:id/status", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { status, paymentStatus } = req.body;
