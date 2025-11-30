@@ -121,6 +121,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     });
   });
 
+  app.get('/api/auth/check-email', async (req, res) => {
+    try {
+      const email = req.query.email as string;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      const user = await storage.getUserByEmail(email);
+      res.json({ exists: !!user });
+    } catch (error) {
+      console.error("Email check error:", error);
+      res.json({ exists: false });
+    }
+  });
+
   app.get('/api/auth/user', async (req: any, res) => {
     try {
       if ((req.session as any)?.localAuth && (req.session as any)?.userId) {

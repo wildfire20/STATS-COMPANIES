@@ -1,18 +1,32 @@
-import { useState, useEffect } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useState } from "react";
+import { useLocation, useSearch, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Mail, Lock, User, Phone } from "lucide-react";
-import logoImage from "@assets/states company logo_1764435536382.jpg";
+import { Loader2, X, ArrowLeft, Phone } from "lucide-react";
+import { SiGoogle, SiApple } from "react-icons/si";
+
+function MicrosoftIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 21 21" className={className} aria-hidden="true">
+      <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+      <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+      <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+      <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+    </svg>
+  );
+}
+
+const emailSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+});
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -28,17 +42,29 @@ const registerSchema = z.object({
   marketingOptIn: z.boolean().default(false),
 });
 
+type EmailFormData = z.infer<typeof emailSchema>;
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
+
+type Step = "initial" | "login" | "register" | "phone";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [step, setStep] = useState<Step>("initial");
+  const [email, setEmail] = useState("");
 
   const params = new URLSearchParams(searchString);
   const redirectPath = params.get("redirect") || "/";
+
+  const emailForm = useForm<EmailFormData>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -59,6 +85,51 @@ export default function Login() {
       marketingOptIn: false,
     },
   });
+
+  const handleClose = () => {
+    setLocation("/");
+  };
+
+  const handleBack = () => {
+    setStep("initial");
+    setEmail("");
+  };
+
+  const handleSocialLogin = (provider: string) => {
+    window.location.href = "/api/login";
+  };
+
+  const handlePhoneLogin = () => {
+    setStep("phone");
+    toast({
+      title: "Phone login",
+      description: "Phone login coming soon. Please use email or social login.",
+    });
+    setTimeout(() => setStep("initial"), 2000);
+  };
+
+  const handleEmailContinue = async (data: EmailFormData) => {
+    setIsLoading(true);
+    setEmail(data.email);
+    
+    try {
+      const response = await fetch(`/api/auth/check-email?email=${encodeURIComponent(data.email)}`);
+      const result = await response.json();
+      
+      if (result.exists) {
+        loginForm.setValue("email", data.email);
+        setStep("login");
+      } else {
+        registerForm.setValue("email", data.email);
+        setStep("register");
+      }
+    } catch (error) {
+      registerForm.setValue("email", data.email);
+      setStep("register");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -108,46 +179,133 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <img src={logoImage} alt="STATS Companies" className="h-16 w-auto" />
-          </div>
-          <CardTitle className="text-2xl">STATS Companies</CardTitle>
-          <CardDescription>Sign in to your account or create a new one</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login" data-testid="tab-login">Sign In</TabsTrigger>
-              <TabsTrigger value="register" data-testid="tab-register">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
+      <Card className="w-full max-w-md relative shadow-lg">
+        <button
+          onClick={handleClose}
+          className="absolute right-4 top-4 p-1 rounded-full hover-elevate text-muted-foreground hover:text-foreground transition-colors"
+          data-testid="button-close-login"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <CardContent className="pt-12 pb-8 px-8">
+          {step === "initial" && (
+            <div className="space-y-6">
+              <div className="text-center space-y-2">
+                <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-login-title">
+                  Log in or sign up
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Access your account to track orders, manage bookings, and more.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full h-12 justify-start px-4 gap-3 font-normal"
+                  onClick={() => handleSocialLogin("google")}
+                  data-testid="button-login-google"
+                >
+                  <SiGoogle className="h-5 w-5 text-[#4285F4]" />
+                  <span>Continue with Google</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full h-12 justify-start px-4 gap-3 font-normal"
+                  onClick={() => handleSocialLogin("apple")}
+                  data-testid="button-login-apple"
+                >
+                  <SiApple className="h-5 w-5" />
+                  <span>Continue with Apple</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full h-12 justify-start px-4 gap-3 font-normal"
+                  onClick={() => handleSocialLogin("microsoft")}
+                  data-testid="button-login-microsoft"
+                >
+                  <MicrosoftIcon className="h-5 w-5" />
+                  <span>Continue with Microsoft</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full h-12 justify-start px-4 gap-3 font-normal"
+                  onClick={handlePhoneLogin}
+                  data-testid="button-login-phone"
+                >
+                  <Phone className="h-5 w-5" />
+                  <span>Continue with phone</span>
+                </Button>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-3 text-muted-foreground">OR</span>
+                </div>
+              </div>
+
+              <Form {...emailForm}>
+                <form onSubmit={emailForm.handleSubmit(handleEmailContinue)} className="space-y-4">
                   <FormField
-                    control={loginForm.control}
+                    control={emailForm.control}
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              placeholder="admin@statscompanies.co.za" 
-                              className="pl-9"
-                              data-testid="input-login-email"
-                              {...field} 
-                            />
-                          </div>
+                          <Input
+                            placeholder="Email address"
+                            className="h-12"
+                            data-testid="input-email"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  <Button
+                    type="submit"
+                    className="w-full h-12"
+                    disabled={isLoading}
+                    data-testid="button-continue"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Continue"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </div>
+          )}
+
+          {step === "login" && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBack}
+                  className="p-1 rounded-full hover-elevate text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="button-back"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-semibold tracking-tight">Welcome back</h1>
+                  <p className="text-sm text-muted-foreground">{email}</p>
+                </div>
+              </div>
+
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
                   <FormField
                     control={loginForm.control}
                     name="password"
@@ -155,24 +313,22 @@ export default function Login() {
                       <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              type="password" 
-                              placeholder="Enter your password"
-                              className="pl-9"
-                              data-testid="input-login-password"
-                              {...field} 
-                            />
-                          </div>
+                          <Input
+                            type="password"
+                            placeholder="Enter your password"
+                            className="h-12"
+                            autoFocus
+                            data-testid="input-login-password"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
+                  <Button
+                    type="submit"
+                    className="w-full h-12"
                     disabled={isLoading}
                     data-testid="button-login-submit"
                   >
@@ -187,12 +343,41 @@ export default function Login() {
                   </Button>
                 </form>
               </Form>
-            </TabsContent>
-            
-            <TabsContent value="register">
+
+              <div className="text-center">
+                <button
+                  onClick={() => {
+                    registerForm.setValue("email", email);
+                    setStep("register");
+                  }}
+                  className="text-sm text-muted-foreground hover:text-foreground underline transition-colors"
+                  data-testid="button-create-account"
+                >
+                  Create a new account instead
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === "register" && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBack}
+                  className="p-1 rounded-full hover-elevate text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="button-back"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-semibold tracking-tight">Create your account</h1>
+                  <p className="text-sm text-muted-foreground">{email}</p>
+                </div>
+              </div>
+
               <Form {...registerForm}>
                 <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={registerForm.control}
                       name="firstName"
@@ -200,15 +385,13 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>First Name</FormLabel>
                           <FormControl>
-                            <div className="relative">
-                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input 
-                                placeholder="John"
-                                className="pl-9"
-                                data-testid="input-register-firstname"
-                                {...field} 
-                              />
-                            </div>
+                            <Input
+                              placeholder="John"
+                              className="h-11"
+                              autoFocus
+                              data-testid="input-register-firstname"
+                              {...field}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -221,10 +404,11 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Last Name</FormLabel>
                           <FormControl>
-                            <Input 
+                            <Input
                               placeholder="Doe"
+                              className="h-11"
                               data-testid="input-register-lastname"
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -232,48 +416,26 @@ export default function Login() {
                       )}
                     />
                   </div>
-                  <FormField
-                    control={registerForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              placeholder="john@example.com"
-                              className="pl-9"
-                              data-testid="input-register-email"
-                              {...field} 
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+
                   <FormField
                     control={registerForm.control}
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number (Optional)</FormLabel>
+                        <FormLabel>Phone (Optional)</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              placeholder="+27 12 345 6789"
-                              className="pl-9"
-                              data-testid="input-register-phone"
-                              {...field} 
-                            />
-                          </div>
+                          <Input
+                            placeholder="+27 12 345 6789"
+                            className="h-11"
+                            data-testid="input-register-phone"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={registerForm.control}
                     name="password"
@@ -281,26 +443,24 @@ export default function Login() {
                       <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              type="password" 
-                              placeholder="Create a password (min 6 chars)"
-                              className="pl-9"
-                              data-testid="input-register-password"
-                              {...field} 
-                            />
-                          </div>
+                          <Input
+                            type="password"
+                            placeholder="Create a password (min 6 chars)"
+                            className="h-11"
+                            data-testid="input-register-password"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={registerForm.control}
                     name="marketingOptIn"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                         <FormControl>
                           <Checkbox
                             checked={field.value}
@@ -316,9 +476,10 @@ export default function Login() {
                       </FormItem>
                     )}
                   />
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12"
                     disabled={isLoading}
                     data-testid="button-register-submit"
                   >
@@ -333,17 +494,42 @@ export default function Login() {
                   </Button>
                 </form>
               </Form>
-            </TabsContent>
-          </Tabs>
+
+              <div className="text-center">
+                <button
+                  onClick={() => {
+                    loginForm.setValue("email", email);
+                    setStep("login");
+                  }}
+                  className="text-sm text-muted-foreground hover:text-foreground underline transition-colors"
+                  data-testid="button-signin-instead"
+                >
+                  Already have an account? Sign in
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === "phone" && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBack}
+                  className="p-1 rounded-full hover-elevate text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="button-back"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <h1 className="text-xl font-semibold tracking-tight">Phone login</h1>
+              </div>
+              <div className="text-center py-8 text-muted-foreground">
+                <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Phone login is coming soon.</p>
+                <p className="text-sm mt-2">Please use email or social login for now.</p>
+              </div>
+            </div>
+          )}
         </CardContent>
-        <CardFooter className="flex flex-col gap-4 text-center text-sm text-muted-foreground">
-          <div className="w-full border-t pt-4">
-            <p className="mb-2">Demo Admin Login:</p>
-            <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
-              admin@statscompanies.co.za / Admin@123
-            </p>
-          </div>
-        </CardFooter>
       </Card>
     </div>
   );
