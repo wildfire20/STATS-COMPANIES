@@ -882,6 +882,74 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Stripe checkout routes
+  app.get("/api/stripe/publishable-key", async (req, res) => {
+    try {
+      const { getStripePublishableKey } = await import("./stripeClient");
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error) {
+      console.error("Failed to get Stripe publishable key:", error);
+      res.status(500).json({ error: "Stripe not configured" });
+    }
+  });
+
+  app.post("/api/stripe/create-checkout-session", isAuthenticated, async (req: any, res) => {
+    try {
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+      
+      const userId = (req.session as any)?.localAuth && (req.session as any)?.userId 
+        ? (req.session as any).userId 
+        : req.user?.claims?.sub;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const { orderId, amount, currency = "zar" } = req.body;
+      
+      if (!orderId || !amount) {
+        return res.status(400).json({ error: "Order ID and amount are required" });
+      }
+      
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: currency.toLowerCase(),
+              product_data: {
+                name: `STATS Companies Order #${orderId}`,
+                description: "Order payment",
+              },
+              unit_amount: Math.round(amount * 100),
+            },
+            quantity: 1,
+          },
+        ],
+        customer_email: user.email,
+        metadata: {
+          orderId,
+          userId,
+        },
+        success_url: `${req.protocol}://${req.get("host")}/dashboard/orders/${orderId}?payment=success`,
+        cancel_url: `${req.protocol}://${req.get("host")}/checkout?payment=cancelled`,
+      });
+      
+      res.json({ sessionId: session.id, url: session.url });
+    } catch (error) {
+      console.error("Stripe checkout session error:", error);
+      res.status(500).json({ error: "Failed to create checkout session" });
+    }
+  });
+
   app.get("/public-objects/:filePath(*)", async (req, res) => {
     const filePath = req.params.filePath;
     const objectStorageService = new ObjectStorageService();
