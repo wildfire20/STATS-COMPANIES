@@ -861,4 +861,370 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ error: "Internal server error" });
     }
   });
+
+  // =====================================================
+  // CLIENT DASHBOARD API ROUTES
+  // =====================================================
+
+  // Helper to get authenticated user ID
+  const getAuthenticatedUserId = (req: any): string | null => {
+    if ((req.session as any)?.localAuth && (req.session as any)?.userId) {
+      return (req.session as any).userId;
+    }
+    if (req.user?.claims?.sub) {
+      return req.user.claims.sub;
+    }
+    return null;
+  };
+
+  // Client Dashboard Stats
+  app.get("/api/client/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const [orders, bookings, invoices, notifications] = await Promise.all([
+        storage.getOrdersByUser(userId),
+        storage.getBookingsByUser(userId),
+        storage.getInvoicesByUser(userId),
+        storage.getUnreadNotifications(userId),
+      ]);
+
+      const totalSpent = orders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+      const pendingOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'completed').length;
+      const upcomingBookings = bookings.filter(b => b.status === 'confirmed' && new Date(b.date) > new Date()).length;
+
+      res.json({
+        totalOrders: orders.length,
+        pendingOrders,
+        totalSpent,
+        totalBookings: bookings.length,
+        upcomingBookings,
+        totalInvoices: invoices.length,
+        unreadNotifications: notifications.length,
+      });
+    } catch (error) {
+      console.error("Error fetching client stats:", error);
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // Client Profile
+  app.get("/api/client/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  app.put("/api/client/profile", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { firstName, lastName, phone, profileImageUrl, marketingOptIn } = req.body;
+      const user = await storage.updateUserProfile(userId, {
+        firstName,
+        lastName,
+        phone,
+        profileImageUrl,
+        marketingOptIn,
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  // Client Addresses
+  app.get("/api/client/addresses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const addresses = await storage.getAddressesByUser(userId);
+      res.json(addresses);
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+      res.status(500).json({ error: "Failed to fetch addresses" });
+    }
+  });
+
+  app.post("/api/client/addresses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { label, street, city, province, postalCode, country, type, isDefault } = req.body;
+      
+      const address = await storage.createAddress({
+        userId,
+        label,
+        street,
+        city,
+        province,
+        postalCode,
+        country: country || "South Africa",
+        type: type || "delivery",
+        isDefault: isDefault || false,
+      });
+
+      if (isDefault) {
+        await storage.setDefaultAddress(userId, address.id);
+      }
+
+      res.status(201).json(address);
+    } catch (error) {
+      console.error("Error creating address:", error);
+      res.status(500).json({ error: "Failed to create address" });
+    }
+  });
+
+  app.put("/api/client/addresses/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const address = await storage.getAddress(req.params.id);
+      if (!address || address.userId !== userId) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+
+      const { label, street, city, province, postalCode, country, type, isDefault } = req.body;
+      
+      const updatedAddress = await storage.updateAddress(req.params.id, {
+        label,
+        street,
+        city,
+        province,
+        postalCode,
+        country,
+        type,
+      });
+
+      if (isDefault && updatedAddress) {
+        await storage.setDefaultAddress(userId, updatedAddress.id);
+      }
+
+      res.json(updatedAddress);
+    } catch (error) {
+      console.error("Error updating address:", error);
+      res.status(500).json({ error: "Failed to update address" });
+    }
+  });
+
+  app.delete("/api/client/addresses/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const address = await storage.getAddress(req.params.id);
+      if (!address || address.userId !== userId) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+
+      await storage.deleteAddress(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting address:", error);
+      res.status(500).json({ error: "Failed to delete address" });
+    }
+  });
+
+  app.put("/api/client/addresses/:id/default", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const address = await storage.getAddress(req.params.id);
+      if (!address || address.userId !== userId) {
+        return res.status(404).json({ error: "Address not found" });
+      }
+
+      await storage.setDefaultAddress(userId, req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error setting default address:", error);
+      res.status(500).json({ error: "Failed to set default address" });
+    }
+  });
+
+  // Client Orders
+  app.get("/api/client/orders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const orders = await storage.getOrdersByUser(userId);
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ error: "Failed to fetch orders" });
+    }
+  });
+
+  app.get("/api/client/orders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const order = await storage.getOrder(req.params.id);
+      if (!order || order.userId !== userId) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      const [statusHistory, invoices] = await Promise.all([
+        storage.getOrderStatusHistory(order.id),
+        storage.getInvoicesByOrder(order.id),
+      ]);
+
+      res.json({
+        ...order,
+        statusHistory,
+        invoices,
+      });
+    } catch (error) {
+      console.error("Error fetching order:", error);
+      res.status(500).json({ error: "Failed to fetch order" });
+    }
+  });
+
+  // Client Bookings
+  app.get("/api/client/bookings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const bookings = await storage.getBookingsByUser(userId);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      res.status(500).json({ error: "Failed to fetch bookings" });
+    }
+  });
+
+  // Client Invoices
+  app.get("/api/client/invoices", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const invoices = await storage.getInvoicesByUser(userId);
+      res.json(invoices);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ error: "Failed to fetch invoices" });
+    }
+  });
+
+  app.get("/api/client/invoices/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const invoice = await storage.getInvoice(req.params.id);
+      if (!invoice || invoice.userId !== userId) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error fetching invoice:", error);
+      res.status(500).json({ error: "Failed to fetch invoice" });
+    }
+  });
+
+  // Client Notifications
+  app.get("/api/client/notifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const notifications = await storage.getNotificationsByUser(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  app.put("/api/client/notifications/:id/read", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const notification = await storage.markNotificationRead(req.params.id);
+      if (!notification) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification read:", error);
+      res.status(500).json({ error: "Failed to mark notification read" });
+    }
+  });
+
+  app.put("/api/client/notifications/read-all", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      await storage.markAllNotificationsRead(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking all notifications read:", error);
+      res.status(500).json({ error: "Failed to mark all notifications read" });
+    }
+  });
 }
