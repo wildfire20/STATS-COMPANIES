@@ -209,7 +209,7 @@ export function Header() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-full sm:w-[350px] p-0 border-l-0">
+            <SheetContent side="right" className="w-full sm:w-[350px] p-0 border-l-0" hideClose>
               <motion.div 
                 className="flex flex-col h-full bg-gradient-to-b from-background to-muted/30"
                 initial={{ opacity: 0, x: 50 }}

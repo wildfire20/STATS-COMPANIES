@@ -73,7 +73,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
         title: "Added to cart",
         description: "Item has been added to your cart.",
       });
-      setIsOpen(true);
     },
     onError: (error: Error) => {
       toast({
