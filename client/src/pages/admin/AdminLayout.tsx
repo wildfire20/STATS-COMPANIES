@@ -17,13 +17,15 @@ import {
   LogOut,
   ChevronLeft,
   CreditCard,
-  Mail
+  Mail,
+  Camera
 } from "lucide-react";
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/services", label: "Services", icon: Settings },
   { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/equipment", label: "Equipment", icon: Camera },
   { href: "/admin/promotions", label: "Promotions", icon: Tag },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },

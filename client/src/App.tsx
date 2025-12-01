@@ -18,6 +18,7 @@ import Promotions from "@/pages/Promotions";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import Login from "@/pages/Login";
+import EquipmentRental from "@/pages/EquipmentRental";
 import NotFound from "@/pages/not-found";
 
 import AdminDashboard from "@/pages/admin/Dashboard";
@@ -32,6 +33,7 @@ import TestimonialsManagement from "@/pages/admin/TestimonialsManagement";
 import TeamManagement from "@/pages/admin/TeamManagement";
 import PaymentSettingsManagement from "@/pages/admin/PaymentSettingsManagement";
 import ContactSettingsManagement from "@/pages/admin/ContactSettingsManagement";
+import EquipmentManagement from "@/pages/admin/EquipmentManagement";
 
 import ClientDashboard from "@/pages/client/Dashboard";
 import ClientOrders from "@/pages/client/Orders";
@@ -51,6 +53,7 @@ function Router() {
       <Route path="/bookings" component={Bookings} />
       <Route path="/quote" component={Quote} />
       <Route path="/promotions" component={Promotions} />
+      <Route path="/equipment" component={EquipmentRental} />
       <Route path="/cart" component={Cart} />
       <Route path="/checkout" component={Checkout} />
       
@@ -66,6 +69,7 @@ function Router() {
       <Route path="/admin/team" component={TeamManagement} />
       <Route path="/admin/payments" component={PaymentSettingsManagement} />
       <Route path="/admin/contact" component={ContactSettingsManagement} />
+      <Route path="/admin/equipment" component={EquipmentManagement} />
 
       <Route path="/dashboard" component={ClientDashboard} />
       <Route path="/dashboard/orders/:id" component={ClientOrders} />
