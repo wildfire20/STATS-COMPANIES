@@ -444,3 +444,69 @@ export const insertContactSettingSchema = createInsertSchema(contactSettings).om
 
 export type InsertContactSetting = z.infer<typeof insertContactSettingSchema>;
 export type ContactSetting = typeof contactSettings.$inferSelect;
+
+// Equipment table for rental items
+export const equipment = pgTable("equipment", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: varchar("category").notNull(), // camera, lighting, audio, tripod, lens, drone, other
+  brand: varchar("brand"),
+  model: varchar("model"),
+  image: text("image"),
+  dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }).notNull(),
+  weeklyRate: decimal("weekly_rate", { precision: 10, scale: 2 }),
+  deposit: decimal("deposit", { precision: 10, scale: 2 }),
+  quantity: integer("quantity").notNull().default(1),
+  availableQuantity: integer("available_quantity").notNull().default(1),
+  condition: varchar("condition").default("excellent"), // excellent, good, fair
+  specifications: text("specifications"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEquipmentSchema = createInsertSchema(equipment).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEquipment = z.infer<typeof insertEquipmentSchema>;
+export type Equipment = typeof equipment.$inferSelect;
+
+// Equipment rentals table for tracking rental requests
+export const equipmentRentals = pgTable("equipment_rentals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  rentalNumber: varchar("rental_number").unique(),
+  userId: varchar("user_id"),
+  equipmentId: varchar("equipment_id").notNull(),
+  equipmentName: text("equipment_name").notNull(),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  customerPhone: text("customer_phone").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }).notNull(),
+  totalDays: integer("total_days").notNull(),
+  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
+  deposit: decimal("deposit", { precision: 10, scale: 2 }).default("0"),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  notes: text("notes"),
+  idDocument: text("id_document"), // URL to uploaded ID document
+  status: varchar("status").default("pending"), // pending, approved, active, returned, cancelled
+  paymentStatus: varchar("payment_status").default("pending"), // pending, deposit_paid, paid, refunded
+  returnedAt: timestamp("returned_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertEquipmentRentalSchema = createInsertSchema(equipmentRentals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEquipmentRental = z.infer<typeof insertEquipmentRentalSchema>;
+export type EquipmentRental = typeof equipmentRentals.$inferSelect;
