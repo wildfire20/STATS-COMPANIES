@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import Home from "@/pages/Home";
@@ -124,6 +125,7 @@ function App() {
             </Route>
           </Switch>
           <CartDrawer />
+          <WhatsAppButton />
           <Toaster />
         </CartProvider>
       </TooltipProvider>
