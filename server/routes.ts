@@ -749,6 +749,27 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
       }
+
+      // Send order status update email
+      if (order.customerEmail && order.customerName && order.items) {
+        const items = Array.isArray(order.items) 
+          ? order.items.map((item: { name: string; quantity: number; price: number }) => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: String(item.price)
+            }))
+          : [];
+        
+        sendOrderStatusEmail(
+          order.customerEmail,
+          order.customerName,
+          order.orderNumber || order.id,
+          status,
+          items,
+          order.total
+        ).catch(err => console.error("Failed to send order status email:", err));
+      }
+
       res.json(order);
     } catch (error) {
       res.status(500).json({ error: "Failed to update order status" });
@@ -780,6 +801,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!booking) {
         return res.status(404).json({ error: "Booking not found" });
       }
+
+      // Send booking status update email
+      if (booking.email && booking.name && booking.serviceName) {
+        sendBookingStatusEmail(
+          booking.email,
+          booking.name,
+          booking.serviceName,
+          booking.date,
+          status,
+          booking.notes || undefined
+        ).catch(err => console.error("Failed to send booking status email:", err));
+      }
+
       res.json(booking);
     } catch (error) {
       res.status(500).json({ error: "Failed to update booking status" });
@@ -806,11 +840,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/admin/quotes/:id/status", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { status } = req.body;
+      const { status, estimatedPrice, notes } = req.body;
       const quote = await storage.updateQuoteRequestStatus(req.params.id, status);
       if (!quote) {
         return res.status(404).json({ error: "Quote not found" });
       }
+
+      // Send quote status update email
+      if (quote.email && quote.name && quote.serviceName) {
+        const quoteNumber = `QT-${quote.id.substring(0, 8).toUpperCase()}`;
+        sendQuoteStatusEmail(
+          quote.email,
+          quote.name,
+          quote.serviceName,
+          quoteNumber,
+          status,
+          estimatedPrice,
+          notes
+        ).catch(err => console.error("Failed to send quote status email:", err));
+      }
+
       res.json(quote);
     } catch (error) {
       res.status(500).json({ error: "Failed to update quote status" });
