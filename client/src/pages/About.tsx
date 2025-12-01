@@ -235,7 +235,7 @@ export default function About() {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-all duration-500 overflow-hidden" data-testid={`card-team-${member.id}`}>
+                <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-all duration-500 overflow-hidden h-full flex flex-col" data-testid={`card-team-${member.id}`}>
                   <CardHeader className="pb-4">
                     <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary/10 to-accent/20 flex items-center justify-center mx-auto mb-6 overflow-hidden ring-4 ring-white shadow-xl">
                       {member.image ? (
@@ -256,13 +256,17 @@ export default function About() {
                       {member.role}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    {member.bio && (
-                      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{member.bio}</p>
-                    )}
-                    {member.experience && (
-                      <Badge variant="secondary" className="text-xs">{member.experience}</Badge>
-                    )}
+                  <CardContent className="pt-0 flex-1 flex flex-col justify-between">
+                    <div>
+                      {member.bio && (
+                        <p className="text-sm text-muted-foreground mb-4 leading-relaxed">{member.bio}</p>
+                      )}
+                    </div>
+                    <div className="mt-auto">
+                      {member.experience && (
+                        <Badge variant="secondary" className="text-xs">{member.experience}</Badge>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
