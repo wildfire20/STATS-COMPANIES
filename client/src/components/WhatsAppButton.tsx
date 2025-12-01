@@ -1,17 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { FaWhatsapp } from "react-icons/fa";
 
-interface ContactSettings {
-  id: string;
-  whatsappNumber: string | null;
+interface ContactInfo {
+  whatsapp: string | null;
 }
 
 export function WhatsAppButton() {
-  const { data: settings } = useQuery<ContactSettings>({
-    queryKey: ["/api/contact-settings"],
+  const { data: settings } = useQuery<ContactInfo>({
+    queryKey: ["/api/contact-info"],
   });
 
-  const whatsappNumber = settings?.whatsappNumber || "+27112223333";
+  const whatsappNumber = settings?.whatsapp || "+27112223333";
   
   const cleanNumber = whatsappNumber.replace(/[^0-9+]/g, "");
   const whatsappUrl = `https://wa.me/${cleanNumber.replace("+", "")}?text=Hi, I would like to enquire about your services.`;
