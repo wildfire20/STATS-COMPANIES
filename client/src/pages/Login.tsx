@@ -183,16 +183,18 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
-      <Card className="w-full max-w-md relative shadow-lg">
-        <button
+      <Card className="w-full max-w-md relative shadow-lg overflow-visible">
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleClose}
-          className="absolute right-4 top-4 p-1 rounded-full hover-elevate text-muted-foreground hover:text-foreground transition-colors"
+          className="absolute -right-2 -top-2 h-8 w-8 rounded-full bg-card border shadow-md z-10"
           data-testid="button-close-login"
         >
-          <X className="h-5 w-5" />
-        </button>
+          <X className="h-4 w-4" />
+        </Button>
 
-        <CardContent className="pt-12 pb-8 px-8">
+        <CardContent className="pt-8 pb-8 px-8">
           {step === "initial" && (
             <div className="space-y-6">
               <div className="text-center space-y-3">
