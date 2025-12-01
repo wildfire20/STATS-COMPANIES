@@ -16,6 +16,8 @@ import {
   cartItems, type CartItem, type InsertCartItem,
   paymentSettings, type PaymentSetting, type InsertPaymentSetting,
   contactSettings, type ContactSetting, type InsertContactSetting,
+  equipment, type Equipment, type InsertEquipment,
+  equipmentRentals, type EquipmentRental, type InsertEquipmentRental,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull } from "drizzle-orm";
@@ -143,6 +145,24 @@ export interface IStorage {
   getContactSettings(): Promise<ContactSetting | undefined>;
   createContactSettings(settings: InsertContactSetting): Promise<ContactSetting>;
   updateContactSettings(id: string, settings: Partial<InsertContactSetting>): Promise<ContactSetting | undefined>;
+  
+  // Equipment operations
+  getEquipment(): Promise<Equipment[]>;
+  getAllEquipment(): Promise<Equipment[]>;
+  getEquipmentById(id: string): Promise<Equipment | undefined>;
+  getEquipmentByCategory(category: string): Promise<Equipment[]>;
+  createEquipment(item: InsertEquipment): Promise<Equipment>;
+  updateEquipment(id: string, item: Partial<InsertEquipment>): Promise<Equipment | undefined>;
+  deleteEquipment(id: string): Promise<boolean>;
+  
+  // Equipment rental operations
+  getEquipmentRentals(): Promise<EquipmentRental[]>;
+  getEquipmentRental(id: string): Promise<EquipmentRental | undefined>;
+  getEquipmentRentalsByUser(userId: string): Promise<EquipmentRental[]>;
+  createEquipmentRental(rental: InsertEquipmentRental): Promise<EquipmentRental>;
+  updateEquipmentRental(id: string, rental: Partial<InsertEquipmentRental>): Promise<EquipmentRental | undefined>;
+  updateEquipmentRentalStatus(id: string, status: string, paymentStatus?: string): Promise<EquipmentRental | undefined>;
+  deleteEquipmentRental(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -713,6 +733,92 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contactSettings.id, id))
       .returning();
     return setting;
+  }
+
+  // Equipment operations
+  async getEquipment(): Promise<Equipment[]> {
+    return db.select().from(equipment).where(eq(equipment.isActive, true)).orderBy(desc(equipment.createdAt));
+  }
+
+  async getAllEquipment(): Promise<Equipment[]> {
+    return db.select().from(equipment).orderBy(desc(equipment.createdAt));
+  }
+
+  async getEquipmentById(id: string): Promise<Equipment | undefined> {
+    const [item] = await db.select().from(equipment).where(eq(equipment.id, id));
+    return item;
+  }
+
+  async getEquipmentByCategory(category: string): Promise<Equipment[]> {
+    return db.select().from(equipment).where(and(eq(equipment.category, category), eq(equipment.isActive, true)));
+  }
+
+  async createEquipment(item: InsertEquipment): Promise<Equipment> {
+    const [equipmentItem] = await db.insert(equipment).values(item).returning();
+    return equipmentItem;
+  }
+
+  async updateEquipment(id: string, updates: Partial<InsertEquipment>): Promise<Equipment | undefined> {
+    const [item] = await db
+      .update(equipment)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(equipment.id, id))
+      .returning();
+    return item;
+  }
+
+  async deleteEquipment(id: string): Promise<boolean> {
+    await db.delete(equipment).where(eq(equipment.id, id));
+    return true;
+  }
+
+  // Equipment rental operations
+  async getEquipmentRentals(): Promise<EquipmentRental[]> {
+    return db.select().from(equipmentRentals).orderBy(desc(equipmentRentals.createdAt));
+  }
+
+  async getEquipmentRental(id: string): Promise<EquipmentRental | undefined> {
+    const [rental] = await db.select().from(equipmentRentals).where(eq(equipmentRentals.id, id));
+    return rental;
+  }
+
+  async getEquipmentRentalsByUser(userId: string): Promise<EquipmentRental[]> {
+    return db.select().from(equipmentRentals).where(eq(equipmentRentals.userId, userId)).orderBy(desc(equipmentRentals.createdAt));
+  }
+
+  async createEquipmentRental(rental: InsertEquipmentRental): Promise<EquipmentRental> {
+    const [rentalItem] = await db.insert(equipmentRentals).values(rental).returning();
+    return rentalItem;
+  }
+
+  async updateEquipmentRental(id: string, updates: Partial<InsertEquipmentRental>): Promise<EquipmentRental | undefined> {
+    const [rental] = await db
+      .update(equipmentRentals)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(equipmentRentals.id, id))
+      .returning();
+    return rental;
+  }
+
+  async updateEquipmentRentalStatus(id: string, status: string, paymentStatus?: string): Promise<EquipmentRental | undefined> {
+    const updates: Partial<InsertEquipmentRental> = { status };
+    if (paymentStatus) {
+      updates.paymentStatus = paymentStatus;
+    }
+    if (status === "returned") {
+      updates.returnedAt = new Date();
+    }
+    const [rental] = await db
+      .update(equipmentRentals)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(equipmentRentals.id, id))
+      .returning();
+    return rental;
+  }
+
+  async deleteEquipmentRental(id: string): Promise<boolean> {
+    await db.delete(equipmentRentals).where(eq(equipmentRentals.id, id));
+    return true;
   }
 }
 
