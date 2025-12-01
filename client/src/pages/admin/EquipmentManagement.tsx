@@ -171,8 +171,11 @@ export default function EquipmentManagement() {
     e.preventDefault();
     const submitData = {
       ...formData,
-      quantity: parseInt(formData.quantity),
-      availableQuantity: parseInt(formData.availableQuantity),
+      dailyRate: formData.dailyRate || "0",
+      weeklyRate: formData.weeklyRate || "0",
+      deposit: formData.deposit || "0",
+      quantity: parseInt(formData.quantity) || 1,
+      availableQuantity: parseInt(formData.availableQuantity) || 1,
     };
     if (editingEquipment) {
       updateMutation.mutate({ id: editingEquipment.id, data: submitData });
