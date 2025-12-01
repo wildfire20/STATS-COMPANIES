@@ -13,7 +13,9 @@ import {
   insertPromotionSchema,
   insertPortfolioItemSchema,
   insertTestimonialSchema,
-  insertTeamMemberSchema
+  insertTeamMemberSchema,
+  insertEquipmentSchema,
+  insertEquipmentRentalSchema
 } from "@shared/schema";
 import { z } from "zod";
 import crypto from "crypto";
@@ -1793,6 +1795,224 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error("Checkout error:", error);
       res.status(500).json({ error: "Checkout failed" });
+    }
+  });
+
+  // Equipment Routes
+  app.get("/api/equipment", async (req, res) => {
+    try {
+      const { category } = req.query;
+      let items;
+      if (category && typeof category === 'string') {
+        items = await storage.getEquipmentByCategory(category);
+      } else {
+        items = await storage.getEquipment();
+      }
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching equipment:", error);
+      res.status(500).json({ error: "Failed to fetch equipment" });
+    }
+  });
+
+  app.get("/api/equipment/all", isAdmin, async (req, res) => {
+    try {
+      const items = await storage.getAllEquipment();
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching all equipment:", error);
+      res.status(500).json({ error: "Failed to fetch equipment" });
+    }
+  });
+
+  app.get("/api/equipment/:id", async (req, res) => {
+    try {
+      const item = await storage.getEquipmentById(req.params.id);
+      if (!item) {
+        return res.status(404).json({ error: "Equipment not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching equipment:", error);
+      res.status(500).json({ error: "Failed to fetch equipment" });
+    }
+  });
+
+  app.post("/api/equipment", isAdmin, async (req, res) => {
+    try {
+      const validatedData = insertEquipmentSchema.parse(req.body);
+      const item = await storage.createEquipment(validatedData);
+      res.status(201).json(item);
+    } catch (error) {
+      console.error("Error creating equipment:", error);
+      res.status(500).json({ error: "Failed to create equipment" });
+    }
+  });
+
+  app.patch("/api/equipment/:id", isAdmin, async (req, res) => {
+    try {
+      const item = await storage.updateEquipment(req.params.id, req.body);
+      if (!item) {
+        return res.status(404).json({ error: "Equipment not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating equipment:", error);
+      res.status(500).json({ error: "Failed to update equipment" });
+    }
+  });
+
+  app.delete("/api/equipment/:id", isAdmin, async (req, res) => {
+    try {
+      await storage.deleteEquipment(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting equipment:", error);
+      res.status(500).json({ error: "Failed to delete equipment" });
+    }
+  });
+
+  // Equipment Rental Routes
+  app.get("/api/equipment-rentals", isAdmin, async (req, res) => {
+    try {
+      const rentals = await storage.getEquipmentRentals();
+      res.json(rentals);
+    } catch (error) {
+      console.error("Error fetching equipment rentals:", error);
+      res.status(500).json({ error: "Failed to fetch equipment rentals" });
+    }
+  });
+
+  app.get("/api/equipment-rentals/user", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const rentals = await storage.getEquipmentRentalsByUser(userId);
+      res.json(rentals);
+    } catch (error) {
+      console.error("Error fetching user rentals:", error);
+      res.status(500).json({ error: "Failed to fetch user rentals" });
+    }
+  });
+
+  app.get("/api/equipment-rentals/:id", async (req, res) => {
+    try {
+      const rental = await storage.getEquipmentRental(req.params.id);
+      if (!rental) {
+        return res.status(404).json({ error: "Rental not found" });
+      }
+      res.json(rental);
+    } catch (error) {
+      console.error("Error fetching rental:", error);
+      res.status(500).json({ error: "Failed to fetch rental" });
+    }
+  });
+
+  app.post("/api/equipment-rentals", async (req: any, res) => {
+    try {
+      const userId = getAuthenticatedUserId(req);
+      const equipment = await storage.getEquipmentById(req.body.equipmentId);
+      if (!equipment) {
+        return res.status(404).json({ error: "Equipment not found" });
+      }
+
+      const startDate = new Date(req.body.startDate);
+      const endDate = new Date(req.body.endDate);
+      const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (totalDays < 1) {
+        return res.status(400).json({ error: "Rental must be at least 1 day" });
+      }
+
+      const quantity = req.body.quantity || 1;
+      if (quantity > (equipment.availableQuantity || 0)) {
+        return res.status(400).json({ error: "Not enough equipment available" });
+      }
+
+      const dailyRate = parseFloat(equipment.dailyRate);
+      const subtotal = dailyRate * totalDays * quantity;
+      const deposit = equipment.deposit ? parseFloat(equipment.deposit) * quantity : 0;
+      const total = subtotal + deposit;
+
+      const rentalNumber = `RNT-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
+
+      const rental = await storage.createEquipmentRental({
+        rentalNumber,
+        userId: userId || undefined,
+        equipmentId: equipment.id,
+        equipmentName: equipment.name,
+        customerName: req.body.customerName,
+        customerEmail: req.body.customerEmail,
+        customerPhone: req.body.customerPhone,
+        startDate,
+        endDate,
+        quantity,
+        dailyRate: dailyRate.toFixed(2),
+        totalDays,
+        subtotal: subtotal.toFixed(2),
+        deposit: deposit.toFixed(2),
+        total: total.toFixed(2),
+        notes: req.body.notes,
+        status: "pending",
+        paymentStatus: "pending",
+      });
+
+      // Update available quantity
+      await storage.updateEquipment(equipment.id, {
+        availableQuantity: (equipment.availableQuantity || 0) - quantity,
+      });
+
+      res.status(201).json(rental);
+    } catch (error) {
+      console.error("Error creating rental:", error);
+      res.status(500).json({ error: "Failed to create rental request" });
+    }
+  });
+
+  app.patch("/api/equipment-rentals/:id/status", isAdmin, async (req, res) => {
+    try {
+      const { status, paymentStatus } = req.body;
+      const rental = await storage.updateEquipmentRentalStatus(req.params.id, status, paymentStatus);
+      if (!rental) {
+        return res.status(404).json({ error: "Rental not found" });
+      }
+
+      // If returned, restore available quantity
+      if (status === "returned") {
+        const equipment = await storage.getEquipmentById(rental.equipmentId);
+        if (equipment) {
+          await storage.updateEquipment(equipment.id, {
+            availableQuantity: (equipment.availableQuantity || 0) + rental.quantity,
+          });
+        }
+      }
+
+      res.json(rental);
+    } catch (error) {
+      console.error("Error updating rental status:", error);
+      res.status(500).json({ error: "Failed to update rental status" });
+    }
+  });
+
+  app.delete("/api/equipment-rentals/:id", isAdmin, async (req, res) => {
+    try {
+      const rental = await storage.getEquipmentRental(req.params.id);
+      if (rental && rental.status !== "returned" && rental.status !== "cancelled") {
+        // Restore available quantity for active rentals
+        const equipment = await storage.getEquipmentById(rental.equipmentId);
+        if (equipment) {
+          await storage.updateEquipment(equipment.id, {
+            availableQuantity: (equipment.availableQuantity || 0) + rental.quantity,
+          });
+        }
+      }
+      await storage.deleteEquipmentRental(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting rental:", error);
+      res.status(500).json({ error: "Failed to delete rental" });
     }
   });
 }
