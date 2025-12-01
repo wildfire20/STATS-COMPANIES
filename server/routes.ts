@@ -17,6 +17,14 @@ import {
   insertEquipmentSchema,
   insertEquipmentRentalSchema
 } from "@shared/schema";
+import {
+  sendEquipmentRentalStatusEmail,
+  sendOrderStatusEmail,
+  sendBookingStatusEmail,
+  sendQuoteStatusEmail,
+  sendWelcomeEmail,
+  sendContactFormEmail
+} from "./email";
 import { z } from "zod";
 import crypto from "crypto";
 import multer from "multer";
@@ -1964,6 +1972,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         availableQuantity: (equipment.availableQuantity || 0) - quantity,
       });
 
+      // Send confirmation email
+      sendEquipmentRentalStatusEmail(
+        req.body.customerEmail,
+        req.body.customerName,
+        equipment.name,
+        rentalNumber,
+        "pending",
+        startDate,
+        endDate,
+        total.toFixed(2)
+      ).catch(err => console.error("Failed to send rental confirmation email:", err));
+
       res.status(201).json(rental);
     } catch (error) {
       console.error("Error creating rental:", error);
@@ -1988,6 +2008,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           });
         }
       }
+
+      // Send status update email
+      sendEquipmentRentalStatusEmail(
+        rental.customerEmail,
+        rental.customerName,
+        rental.equipmentName,
+        rental.rentalNumber,
+        status,
+        rental.startDate,
+        rental.endDate,
+        rental.total
+      ).catch(err => console.error("Failed to send rental status email:", err));
 
       res.json(rental);
     } catch (error) {
