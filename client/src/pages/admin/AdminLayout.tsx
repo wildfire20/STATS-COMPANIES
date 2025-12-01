@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   LayoutDashboard, 
   Package, 
@@ -20,6 +22,13 @@ import {
   Mail,
   Camera
 } from "lucide-react";
+
+interface AdminStats {
+  pendingOrders: number;
+  pendingBookings: number;
+  newQuotes: number;
+  pendingRentals: number;
+}
 
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -46,6 +55,23 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const { user, isAuthenticated, isLoading, isAdmin } = useAuth();
   const { toast } = useToast();
   const [location] = useLocation();
+  
+  const { data: stats } = useQuery<AdminStats>({
+    queryKey: ["/api/admin/stats"],
+    enabled: isAuthenticated && isAdmin,
+    refetchInterval: 30000,
+  });
+
+  const getBadgeCount = (label: string): number => {
+    if (!stats) return 0;
+    switch (label) {
+      case "Orders": return stats.pendingOrders;
+      case "Bookings": return stats.pendingBookings;
+      case "Quotes": return stats.newQuotes;
+      case "Equipment": return stats.pendingRentals;
+      default: return 0;
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -102,6 +128,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             const Icon = item.icon;
             const isActive = location === item.href || 
               (item.href !== "/admin" && location.startsWith(item.href));
+            const badgeCount = getBadgeCount(item.label);
             
             return (
               <Link key={item.href} href={item.href}>
@@ -111,7 +138,16 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                   data-testid={`nav-${item.label.toLowerCase()}`}
                 >
                   <Icon className="h-4 w-4 mr-2" />
-                  {item.label}
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {badgeCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-auto h-5 min-w-5 px-1.5 text-xs"
+                      data-testid={`badge-${item.label.toLowerCase()}`}
+                    >
+                      {badgeCount}
+                    </Badge>
+                  )}
                 </Button>
               </Link>
             );

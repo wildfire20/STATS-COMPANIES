@@ -519,18 +519,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/admin/stats", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const [orders, bookings, quotes, products, services] = await Promise.all([
+      const [orders, bookings, quotes, products, services, rentals] = await Promise.all([
         storage.getOrders(),
         storage.getBookings(),
         storage.getQuoteRequests(),
         storage.getAllProducts(),
         storage.getAllServices(),
+        storage.getEquipmentRentals(),
       ]);
 
       const totalRevenue = orders.reduce((sum, order) => sum + parseFloat(order.total), 0);
       const pendingOrders = orders.filter(o => o.status === 'pending').length;
       const pendingBookings = bookings.filter(b => b.status === 'pending').length;
       const newQuotes = quotes.filter(q => q.status === 'new').length;
+      const pendingRentals = rentals.filter(r => r.status === 'pending').length;
 
       res.json({
         totalRevenue,
@@ -542,6 +544,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         newQuotes,
         totalProducts: products.length,
         totalServices: services.length,
+        totalRentals: rentals.length,
+        pendingRentals,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch stats" });
