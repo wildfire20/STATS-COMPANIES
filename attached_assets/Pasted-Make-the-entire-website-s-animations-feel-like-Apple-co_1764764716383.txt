@@ -1,0 +1,260 @@
+Make the entire website’s animations feel like Apple.com — smooth, elegant, premium, and minimal — using Framer Motion + Tailwind + Next.js.
+
+I want all animations to reflect Apple’s signature style:
+
+Subtle motion
+
+Clean fade-ins
+
+Soft parallax
+
+Section-by-section reveal
+
+Smooth transitions between pages
+
+Micro-interactions on hover
+
+High contrast, premium spacing
+
+No cartoony/bouncy animations
+
+Please implement the animation system across the website using the following rules:
+
+✨ 1. GLOBAL ANIMATION STYLE (Apple-like)
+
+Apply this animation style across the entire site:
+
+Opacity fade-in
+
+TranslateY(20px) upward motion
+
+0.6–0.9s duration
+
+0.1–0.2s delay
+
+No bounce, no spring, no excessive easing
+
+Use easing: "easeOut" or "easeInOut"
+
+Example global animation:
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
+};
+
+
+Use this animation on:
+
+Hero section
+
+Headings
+
+Service cards
+
+Product listings
+
+Portfolio items
+
+Blog posts
+
+Footer sections
+
+🖼 2. HERO SECTION ANIMATIONS (Apple-Level Quality)
+
+Implement:
+
+A. Text fade + slight slide
+
+Title fades in
+
+Subtitle slides up softly
+
+Buttons appear with delay
+
+B. Background image slow zoom-in
+
+Add this effect:
+
+Image zooms from 100% → 105% over 6–10 seconds
+
+Very smooth, subtle
+
+No jitter
+
+C. Staggered child animations
+
+Each element in hero appears one after another, like Apple product pages.
+
+🪄 3. SCROLL-BASED ANIMATIONS (Parallax + Reveal)
+
+Add Apple-style scrolling effects:
+
+A. Parallax
+
+Images scroll slower than text
+
+Background moves subtly
+
+Sections feel 3D
+
+B. Reveal on scroll
+
+Each section animates when entering the viewport:
+
+Fade in
+
+Slide up 20px
+
+0.8s duration
+
+Use Intersection Observer or Framer Motion whileInView.
+
+🎥 4. PRODUCT + SERVICE CARD ANIMATIONS
+
+When the user hovers:
+
+Slight scale (1.02–1.05)
+
+Soft shadow
+
+Image zoom
+
+Description text fade upwards
+
+No bounce
+
+When the card appears on page load:
+
+Fade in
+
+Slide up softly
+
+🌄 5. PORTFOLIO / GALLERY ANIMATIONS
+
+Just like Apple’s product galleries:
+
+Image fade-in from opacity 0 → 1
+
+Slight float effect on hover
+
+Parallax scrolling inside gallery sections
+
+Smooth modal popup animations
+
+🔄 6. PAGE TRANSITIONS (Apple-like smoothness)
+
+Add main layout animation:
+
+Fade page out
+
+Fade next page in
+
+Keep navigation fixed
+
+0.4–0.6 seconds
+
+Very smooth transitions
+
+Use Framer Motion <AnimatePresence>.
+
+🎯 7. MICRO-INTERACTIONS (Minimal + Clean)
+
+Add subtle movements:
+
+Buttons:
+
+Soft hover glow
+
+Slight movement upward
+
+Quick ripple effect
+
+Icons:
+
+Light rotation (2–5 degrees)
+
+Fade in on scroll
+
+Images:
+
+Hover zoom (2–4%)
+
+Parallax on scroll
+
+Inputs:
+
+Border glow on focus
+
+Placeholder fade
+
+🖥 8. Implement the animation system across these pages:
+
+Home
+
+About
+
+Services
+
+Shop
+
+Product page
+
+Portfolio
+
+Blog
+
+Blog post page
+
+Contact
+
+Customer dashboard
+
+Admin dashboard
+
+Animations must remain minimal and elegant.
+
+📦 9. Create reusable animation components
+
+Build reusable motion components in:
+
+/components/animations/
+
+
+Examples:
+
+FadeIn
+
+FadeInUp
+
+SlideInLeft
+
+SlideInRight
+
+ParallaxImage
+
+RevealSection
+
+PageTransitionWrapper
+
+These can be imported anywhere.
+
+🧨 FINAL INSTRUCTION TO REPLIT
+
+Please:
+
+Generate the full animation system
+
+Integrate Framer Motion into all sections
+
+Apply Apple.com-level premium transitions
+
+Add parallax, fade-ins, micro-interactions, and smooth page transitions
+
+Optimize for performance (no heavy Lottie files)
+
+Ensure animations are mobile-friendly
+
+Make the entire site feel luxurious like Apple.com
+
+Begin implementing this animation system now.
