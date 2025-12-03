@@ -18,9 +18,10 @@ import {
   contactSettings, type ContactSetting, type InsertContactSetting,
   equipment, type Equipment, type InsertEquipment,
   equipmentRentals, type EquipmentRental, type InsertEquipmentRental,
+  authOtps, type AuthOtp, type InsertAuthOtp,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, isNull } from "drizzle-orm";
+import { eq, desc, and, isNull, sql, gt } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -163,6 +164,17 @@ export interface IStorage {
   updateEquipmentRental(id: string, rental: Partial<InsertEquipmentRental>): Promise<EquipmentRental | undefined>;
   updateEquipmentRentalStatus(id: string, status: string, paymentStatus?: string): Promise<EquipmentRental | undefined>;
   deleteEquipmentRental(id: string): Promise<boolean>;
+  
+  // OTP operations for phone login
+  createOtp(phone: string, codeHash: string, expiresAt: Date): Promise<AuthOtp>;
+  getValidOtp(phone: string): Promise<AuthOtp | undefined>;
+  incrementOtpAttempts(id: string): Promise<void>;
+  markOtpVerified(id: string): Promise<void>;
+  deleteExpiredOtps(): Promise<void>;
+  getRecentOtpCount(phone: string, minutes: number): Promise<number>;
+  
+  // Phone user operations
+  createPhoneUser(phone: string, firstName?: string, lastName?: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -819,6 +831,84 @@ export class DatabaseStorage implements IStorage {
   async deleteEquipmentRental(id: string): Promise<boolean> {
     await db.delete(equipmentRentals).where(eq(equipmentRentals.id, id));
     return true;
+  }
+
+  // OTP operations for phone login
+  async createOtp(phone: string, codeHash: string, expiresAt: Date): Promise<AuthOtp> {
+    const [otp] = await db.insert(authOtps).values({
+      phone,
+      codeHash,
+      expiresAt,
+      attempts: 0,
+    }).returning();
+    return otp;
+  }
+
+  async getValidOtp(phone: string): Promise<AuthOtp | undefined> {
+    const now = new Date();
+    const [otp] = await db
+      .select()
+      .from(authOtps)
+      .where(
+        and(
+          eq(authOtps.phone, phone),
+          isNull(authOtps.verifiedAt)
+        )
+      )
+      .orderBy(desc(authOtps.createdAt))
+      .limit(1);
+    
+    if (otp && otp.expiresAt > now && (otp.attempts || 0) < 5) {
+      return otp;
+    }
+    return undefined;
+  }
+
+  async incrementOtpAttempts(id: string): Promise<void> {
+    await db
+      .update(authOtps)
+      .set({ attempts: sql`attempts + 1` })
+      .where(eq(authOtps.id, id));
+  }
+
+  async markOtpVerified(id: string): Promise<void> {
+    await db
+      .update(authOtps)
+      .set({ verifiedAt: new Date() })
+      .where(eq(authOtps.id, id));
+  }
+
+  async deleteExpiredOtps(): Promise<void> {
+    const now = new Date();
+    await db.delete(authOtps).where(sql`expires_at < ${now}`);
+  }
+
+  async getRecentOtpCount(phone: string, minutes: number): Promise<number> {
+    const cutoff = new Date(Date.now() - minutes * 60 * 1000);
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(authOtps)
+      .where(
+        and(
+          eq(authOtps.phone, phone),
+          sql`created_at > ${cutoff}`
+        )
+      );
+    return Number(result[0]?.count || 0);
+  }
+
+  // Phone user operations
+  async createPhoneUser(phone: string, firstName?: string, lastName?: string): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        phone,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        role: "customer",
+      })
+      .returning();
+    return user;
   }
 }
 

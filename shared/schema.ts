@@ -510,3 +510,22 @@ export const insertEquipmentRentalSchema = createInsertSchema(equipmentRentals).
 
 export type InsertEquipmentRental = z.infer<typeof insertEquipmentRentalSchema>;
 export type EquipmentRental = typeof equipmentRentals.$inferSelect;
+
+// OTP verification table for phone login
+export const authOtps = pgTable("auth_otps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phone: varchar("phone").notNull(),
+  codeHash: varchar("code_hash").notNull(),
+  attempts: integer("attempts").default(0),
+  expiresAt: timestamp("expires_at").notNull(),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAuthOtpSchema = createInsertSchema(authOtps).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAuthOtp = z.infer<typeof insertAuthOtpSchema>;
+export type AuthOtp = typeof authOtps.$inferSelect;
