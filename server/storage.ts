@@ -835,6 +835,18 @@ export class DatabaseStorage implements IStorage {
 
   // OTP operations for phone login
   async createOtp(phone: string, codeHash: string, expiresAt: Date): Promise<AuthOtp> {
+    // First, invalidate all existing unused OTPs for this phone to prevent reuse of old codes
+    await db
+      .update(authOtps)
+      .set({ verifiedAt: new Date() })
+      .where(
+        and(
+          eq(authOtps.phone, phone),
+          isNull(authOtps.verifiedAt)
+        )
+      );
+    
+    // Then create the new OTP
     const [otp] = await db.insert(authOtps).values({
       phone,
       codeHash,
@@ -852,13 +864,14 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(authOtps.phone, phone),
-          isNull(authOtps.verifiedAt)
+          isNull(authOtps.verifiedAt),
+          gt(authOtps.expiresAt, now)
         )
       )
       .orderBy(desc(authOtps.createdAt))
       .limit(1);
     
-    if (otp && otp.expiresAt > now && (otp.attempts || 0) < 5) {
+    if (otp && (otp.attempts || 0) < 5) {
       return otp;
     }
     return undefined;

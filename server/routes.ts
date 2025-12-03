@@ -210,19 +210,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ message: "OTP expired or not found. Please request a new one." });
       }
 
+      // Check if max attempts already reached BEFORE attempting verification
+      const currentAttempts = otpRecord.attempts || 0;
+      if (currentAttempts >= 5) {
+        return res.status(400).json({ message: "Too many failed attempts. Please request a new OTP." });
+      }
+
       // Verify OTP hash
       const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
       
       if (otpRecord.codeHash !== otpHash) {
         await storage.incrementOtpAttempts(otpRecord.id);
-        const attemptsLeft = 5 - ((otpRecord.attempts || 0) + 1);
+        const attemptsLeft = 5 - (currentAttempts + 1);
         if (attemptsLeft <= 0) {
           return res.status(400).json({ message: "Too many failed attempts. Please request a new OTP." });
         }
         return res.status(400).json({ message: `Invalid OTP. ${attemptsLeft} attempts remaining.` });
       }
 
-      // Mark OTP as verified
+      // Mark OTP as verified immediately to prevent reuse
       await storage.markOtpVerified(otpRecord.id);
 
       // Find or create user by phone
