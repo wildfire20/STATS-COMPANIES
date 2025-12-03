@@ -143,36 +143,70 @@ export default function Shop() {
               {filteredProducts.map((product, index) => (
                 <motion.div
                   key={product.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.05 }}
+                  initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ 
+                    duration: 0.7, 
+                    delay: index * 0.08,
+                    ease: [0.25, 0.1, 0.25, 1]
+                  }}
+                  whileHover={{ 
+                    y: -12,
+                    transition: { duration: 0.4, ease: "easeOut" }
+                  }}
+                  className="group"
                 >
-                  <Card className="overflow-hidden group cursor-pointer border-0 shadow-lg hover:shadow-2xl transition-all duration-500 h-full" data-testid={`card-product-${product.id}`}>
-                    <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/10 flex items-center justify-center relative overflow-hidden img-hover-zoom">
+                  <Card className="overflow-hidden cursor-pointer border-0 shadow-lg group-hover:shadow-2xl transition-shadow duration-500 h-full" data-testid={`card-product-${product.id}`}>
+                    <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/10 flex items-center justify-center relative overflow-hidden">
                       {product.image ? (
-                        <img 
+                        <motion.img 
                           src={product.image} 
                           alt={product.name}
                           className="absolute inset-0 w-full h-full object-cover"
                           data-testid={`img-product-${product.id}`}
+                          whileHover={{ scale: 1.08 }}
+                          transition={{ duration: 0.6, ease: "easeOut" }}
                         />
                       ) : (
-                        <div className="flex flex-col items-center gap-2">
-                          <Printer className="h-20 w-20 text-primary/20 group-hover:scale-110 transition-transform" />
-                        </div>
+                        <motion.div 
+                          className="flex flex-col items-center gap-2"
+                          whileHover={{ scale: 1.1 }}
+                          transition={{ duration: 0.4, ease: "easeOut" }}
+                        >
+                          <Printer className="h-20 w-20 text-primary/20" />
+                        </motion.div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <motion.div 
+                        className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"
+                        initial={{ opacity: 0 }}
+                        whileHover={{ opacity: 1 }}
+                        transition={{ duration: 0.4 }}
+                      />
                       <Badge className="absolute top-4 left-4 bg-secondary/90 backdrop-blur-sm text-white shadow-lg">
                         Popular
                       </Badge>
+                      <motion.div
+                        className="absolute bottom-4 left-4 right-4"
+                        initial={{ opacity: 0, y: 20 }}
+                        whileHover={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                      >
+                        <span className="text-white/90 text-sm font-medium">View Details</span>
+                      </motion.div>
                     </div>
                     <CardContent className="p-5">
                       <div className="mb-3">
                         <Badge variant="secondary" className="text-xs capitalize mb-2">
                           {product.category}
                         </Badge>
-                        <h3 className="font-display font-semibold text-lg text-foreground group-hover:text-primary transition-colors">{product.name}</h3>
+                        <motion.h3 
+                          className="font-display font-semibold text-lg text-foreground"
+                          whileHover={{ x: 4 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          {product.name}
+                        </motion.h3>
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{product.description}</p>
                       <div className="flex items-center justify-between pt-4 border-t border-border/50">
@@ -180,23 +214,28 @@ export default function Shop() {
                           <span className="text-xs text-muted-foreground">From</span>
                           <span className="block text-2xl font-display font-bold text-primary">R{product.basePrice}</span>
                         </div>
-                        <Button 
-                          size="sm" 
-                          className="btn-premium rounded-full px-5" 
-                          data-testid={`button-order-${product.id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddToCart(product);
-                          }}
-                          disabled={addingToCart === product.id}
+                        <motion.div
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.98 }}
                         >
-                          {addingToCart === product.id ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                          )}
-                          {addingToCart === product.id ? "Adding..." : "Add to Cart"}
-                        </Button>
+                          <Button 
+                            size="sm" 
+                            className="btn-premium rounded-full px-5" 
+                            data-testid={`button-order-${product.id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToCart(product);
+                            }}
+                            disabled={addingToCart === product.id}
+                          >
+                            {addingToCart === product.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <ShoppingCart className="h-4 w-4 mr-2" />
+                            )}
+                            {addingToCart === product.id ? "Adding..." : "Add to Cart"}
+                          </Button>
+                        </motion.div>
                       </div>
                     </CardContent>
                   </Card>
