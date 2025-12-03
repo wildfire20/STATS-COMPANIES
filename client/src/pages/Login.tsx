@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useSearch, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, X, ArrowLeft, Phone } from "lucide-react";
+import { Loader2, X, ArrowLeft, Phone, Smartphone } from "lucide-react";
 import { SiGoogle, SiApple } from "react-icons/si";
 import statsLogo from "@assets/states company logo_1764435536382.jpg";
 
@@ -43,11 +43,27 @@ const registerSchema = z.object({
   marketingOptIn: z.boolean().default(false),
 });
 
+const phoneSchema = z.object({
+  phone: z.string().min(9, "Please enter a valid phone number"),
+});
+
+const otpSchema = z.object({
+  otp: z.string().length(6, "OTP must be 6 digits"),
+});
+
+const phoneRegisterSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+});
+
 type EmailFormData = z.infer<typeof emailSchema>;
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
+type PhoneFormData = z.infer<typeof phoneSchema>;
+type OtpFormData = z.infer<typeof otpSchema>;
+type PhoneRegisterFormData = z.infer<typeof phoneRegisterSchema>;
 
-type Step = "initial" | "login" | "register";
+type Step = "initial" | "login" | "register" | "phone" | "phone-verify" | "phone-register";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -56,9 +72,20 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<Step>("initial");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [resendTimer, setResendTimer] = useState(0);
+  const [isNewPhoneUser, setIsNewPhoneUser] = useState(false);
+  const otpInputRef = useRef<HTMLInputElement>(null);
 
   const params = new URLSearchParams(searchString);
   const redirectPath = params.get("redirect") || "/";
+
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
 
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
@@ -87,13 +114,47 @@ export default function Login() {
     },
   });
 
+  const phoneForm = useForm<PhoneFormData>({
+    resolver: zodResolver(phoneSchema),
+    defaultValues: {
+      phone: "",
+    },
+  });
+
+  const otpForm = useForm<OtpFormData>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: {
+      otp: "",
+    },
+  });
+
+  const phoneRegisterForm = useForm<PhoneRegisterFormData>({
+    resolver: zodResolver(phoneRegisterSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+    },
+  });
+
   const handleClose = () => {
     setLocation("/");
   };
 
   const handleBack = () => {
-    setStep("initial");
-    setEmail("");
+    if (step === "phone-verify") {
+      setStep("phone");
+      otpForm.reset();
+    } else if (step === "phone-register") {
+      setStep("phone-verify");
+      phoneRegisterForm.reset();
+    } else if (step === "phone") {
+      setStep("initial");
+      setPhoneNumber("");
+      phoneForm.reset();
+    } else {
+      setStep("initial");
+      setEmail("");
+    }
   };
 
   const handleSocialLogin = (provider: string) => {
@@ -101,10 +162,140 @@ export default function Login() {
   };
 
   const handlePhoneLogin = () => {
-    toast({
-      title: "Coming Soon",
-      description: "Phone login is coming soon. Please use email or social login for now.",
-    });
+    setStep("phone");
+  };
+
+  const handleSendOtp = async (data: PhoneFormData) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/phone/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: data.phone }),
+      });
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to send OTP");
+      }
+      
+      setPhoneNumber(result.phone || data.phone);
+      setResendTimer(60);
+      setStep("phone-verify");
+      toast({
+        title: "OTP Sent",
+        description: "A 6-digit code has been sent to your phone.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send OTP",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/phone/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneNumber }),
+      });
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to resend OTP");
+      }
+      
+      setResendTimer(60);
+      otpForm.reset();
+      toast({
+        title: "OTP Resent",
+        description: "A new 6-digit code has been sent to your phone.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resend OTP",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (data: OtpFormData) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/phone/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          phone: phoneNumber, 
+          otp: data.otp 
+        }),
+      });
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || "Invalid OTP");
+      }
+      
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
+      if (result.isNewUser) {
+        setIsNewPhoneUser(true);
+        setStep("phone-register");
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "You have been logged in successfully.",
+        });
+        if (result.user?.role === "admin") {
+          setLocation("/admin");
+        } else {
+          setLocation(redirectPath.startsWith("/dashboard") ? redirectPath : "/dashboard");
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: "Verification failed",
+        description: error.message || "Invalid OTP",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhoneRegister = async (data: PhoneRegisterFormData) => {
+    setIsLoading(true);
+    try {
+      await apiRequest("PUT", "/api/client/profile", {
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+      
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({
+        title: "Account created!",
+        description: "Welcome to STATS Companies. Check out your new dashboard!",
+      });
+      setLocation("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEmailContinue = async (data: EmailFormData) => {
@@ -542,6 +733,248 @@ export default function Login() {
                   Already have an account? Sign in
                 </button>
               </div>
+            </div>
+          )}
+
+          {step === "phone" && (
+            <div className="space-y-6">
+              <div className="text-center mb-2">
+                <img 
+                  src={statsLogo} 
+                  alt="STATS Companies" 
+                  className="h-12 w-auto mx-auto object-contain"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBack}
+                  className="p-1 rounded-full hover-elevate text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="button-back-phone"
+                  type="button"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-semibold tracking-tight">Sign in with phone</h1>
+                  <p className="text-sm text-muted-foreground">Enter your South African mobile number</p>
+                </div>
+              </div>
+
+              <Form {...phoneForm}>
+                <form onSubmit={phoneForm.handleSubmit(handleSendOtp)} className="space-y-4">
+                  <FormField
+                    control={phoneForm.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input
+                              placeholder="082 123 4567"
+                              className="h-12 pl-10"
+                              autoFocus
+                              data-testid="input-phone"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">
+                          We'll send you a 6-digit verification code
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full h-12"
+                    disabled={isLoading}
+                    data-testid="button-send-otp"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending code...
+                      </>
+                    ) : (
+                      "Send Verification Code"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+
+              <div className="text-center">
+                <button
+                  onClick={() => setStep("initial")}
+                  className="text-sm text-muted-foreground hover:text-foreground underline transition-colors"
+                  data-testid="button-use-email"
+                  type="button"
+                >
+                  Use email instead
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === "phone-verify" && (
+            <div className="space-y-6">
+              <div className="text-center mb-2">
+                <img 
+                  src={statsLogo} 
+                  alt="STATS Companies" 
+                  className="h-12 w-auto mx-auto object-contain"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBack}
+                  className="p-1 rounded-full hover-elevate text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="button-back-verify"
+                  type="button"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-semibold tracking-tight">Enter verification code</h1>
+                  <p className="text-sm text-muted-foreground">Sent to {phoneNumber}</p>
+                </div>
+              </div>
+
+              <Form {...otpForm}>
+                <form onSubmit={otpForm.handleSubmit(handleVerifyOtp)} className="space-y-4">
+                  <FormField
+                    control={otpForm.control}
+                    name="otp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Verification Code</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="000000"
+                            className="h-14 text-center text-2xl tracking-[0.5em] font-mono"
+                            maxLength={6}
+                            autoFocus
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            data-testid="input-otp"
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full h-12"
+                    disabled={isLoading}
+                    data-testid="button-verify-otp"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      "Verify & Continue"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+
+              <div className="text-center">
+                <button
+                  onClick={handleResendOtp}
+                  disabled={resendTimer > 0 || isLoading}
+                  className="text-sm text-muted-foreground hover:text-foreground underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-testid="button-resend-otp"
+                  type="button"
+                >
+                  {resendTimer > 0 ? `Resend code in ${resendTimer}s` : "Resend code"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === "phone-register" && (
+            <div className="space-y-6">
+              <div className="text-center mb-2">
+                <img 
+                  src={statsLogo} 
+                  alt="STATS Companies" 
+                  className="h-12 w-auto mx-auto object-contain"
+                />
+              </div>
+              <div className="text-center">
+                <h1 className="text-xl font-semibold tracking-tight">Complete your profile</h1>
+                <p className="text-sm text-muted-foreground">Tell us a bit about yourself</p>
+              </div>
+
+              <Form {...phoneRegisterForm}>
+                <form onSubmit={phoneRegisterForm.handleSubmit(handlePhoneRegister)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={phoneRegisterForm.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="John"
+                              className="h-11"
+                              autoFocus
+                              data-testid="input-phone-register-firstname"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={phoneRegisterForm.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Doe"
+                              className="h-11"
+                              data-testid="input-phone-register-lastname"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12"
+                    disabled={isLoading}
+                    data-testid="button-phone-register-submit"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Complete Setup"
+                    )}
+                  </Button>
+                </form>
+              </Form>
             </div>
           )}
 

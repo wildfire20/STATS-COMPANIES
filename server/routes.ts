@@ -157,6 +157,94 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Phone OTP authentication routes
+  app.post('/api/auth/phone/send-otp', async (req, res) => {
+    try {
+      const { phone } = req.body;
+      
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      // Validate phone format (South African format)
+      const cleanPhone = phone.replace(/\s+/g, '').replace(/^0/, '+27');
+      if (!/^\+27\d{9}$/.test(cleanPhone)) {
+        return res.status(400).json({ message: "Invalid South African phone number format" });
+      }
+
+      // Rate limiting: max 5 OTPs per phone per 15 minutes
+      const recentCount = await storage.getRecentOtpCount(cleanPhone, 15);
+      if (recentCount >= 5) {
+        return res.status(429).json({ message: "Too many OTP requests. Please wait 15 minutes." });
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+      await storage.createOtp(cleanPhone, otpHash, expiresAt);
+
+      // For demo/development, log the OTP (in production, use SMS service like Twilio)
+      console.log(`[OTP] Phone: ${cleanPhone}, Code: ${otp}`);
+
+      res.json({ message: "OTP sent successfully", phone: cleanPhone });
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      res.status(500).json({ message: "Failed to send OTP" });
+    }
+  });
+
+  app.post('/api/auth/phone/verify-otp', async (req, res) => {
+    try {
+      const { phone, otp, firstName, lastName } = req.body;
+      
+      if (!phone || !otp) {
+        return res.status(400).json({ message: "Phone and OTP are required" });
+      }
+
+      const cleanPhone = phone.replace(/\s+/g, '').replace(/^0/, '+27');
+      const otpRecord = await storage.getValidOtp(cleanPhone);
+
+      if (!otpRecord) {
+        return res.status(400).json({ message: "OTP expired or not found. Please request a new one." });
+      }
+
+      // Verify OTP hash
+      const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+      
+      if (otpRecord.codeHash !== otpHash) {
+        await storage.incrementOtpAttempts(otpRecord.id);
+        const attemptsLeft = 5 - ((otpRecord.attempts || 0) + 1);
+        if (attemptsLeft <= 0) {
+          return res.status(400).json({ message: "Too many failed attempts. Please request a new OTP." });
+        }
+        return res.status(400).json({ message: `Invalid OTP. ${attemptsLeft} attempts remaining.` });
+      }
+
+      // Mark OTP as verified
+      await storage.markOtpVerified(otpRecord.id);
+
+      // Find or create user by phone
+      let user = await storage.getUserByPhone(cleanPhone);
+      
+      if (!user) {
+        user = await storage.createPhoneUser(cleanPhone, firstName, lastName);
+      }
+
+      // Set session
+      (req.session as any).userId = user.id;
+      (req.session as any).localAuth = true;
+      (req.session as any).phoneAuth = true;
+
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword, isNewUser: !user.firstName });
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      res.status(500).json({ message: "Failed to verify OTP" });
+    }
+  });
+
   app.get('/api/auth/user', async (req: any, res) => {
     try {
       if ((req.session as any)?.localAuth && (req.session as any)?.userId) {
