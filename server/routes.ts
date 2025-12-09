@@ -15,7 +15,8 @@ import {
   insertTestimonialSchema,
   insertTeamMemberSchema,
   insertEquipmentSchema,
-  insertEquipmentRentalSchema
+  insertEquipmentRentalSchema,
+  insertServicePlanSchema
 } from "@shared/schema";
 import {
   sendEquipmentRentalStatusEmail,
@@ -490,6 +491,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Service Plans routes (public)
+  app.get("/api/service-plans", async (req, res) => {
+    try {
+      const plans = await storage.getActiveServicePlans();
+      res.json(plans);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch service plans" });
+    }
+  });
+
+  app.get("/api/service-plans/:id", async (req, res) => {
+    try {
+      const plan = await storage.getServicePlan(req.params.id);
+      if (!plan) {
+        return res.status(404).json({ error: "Service plan not found" });
+      }
+      res.json(plan);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch service plan" });
+    }
+  });
+
   app.get("/api/portfolio", async (req, res) => {
     try {
       const category = req.query.category as string | undefined;
@@ -729,6 +752,50 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete service" });
+    }
+  });
+
+  // Admin Service Plans routes
+  app.get("/api/admin/service-plans", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const plans = await storage.getServicePlans();
+      res.json(plans);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch service plans" });
+    }
+  });
+
+  app.post("/api/admin/service-plans", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const data = insertServicePlanSchema.parse(req.body);
+      const plan = await storage.createServicePlan(data);
+      res.status(201).json(plan);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid service plan data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create service plan" });
+    }
+  });
+
+  app.put("/api/admin/service-plans/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const plan = await storage.updateServicePlan(req.params.id, req.body);
+      if (!plan) {
+        return res.status(404).json({ error: "Service plan not found" });
+      }
+      res.json(plan);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update service plan" });
+    }
+  });
+
+  app.delete("/api/admin/service-plans/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteServicePlan(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete service plan" });
     }
   });
 

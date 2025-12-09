@@ -162,7 +162,10 @@ export default function Login() {
   };
 
   const handlePhoneLogin = () => {
-    setStep("phone");
+    toast({
+      title: "Coming Soon",
+      description: "Phone number login will be available soon. Please use email or social login for now.",
+    });
   };
 
   const handleSendOtp = async (data: PhoneFormData) => {

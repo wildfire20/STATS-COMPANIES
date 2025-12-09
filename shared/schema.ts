@@ -511,6 +511,30 @@ export const insertEquipmentRentalSchema = createInsertSchema(equipmentRentals).
 export type InsertEquipmentRental = z.infer<typeof insertEquipmentRentalSchema>;
 export type EquipmentRental = typeof equipmentRentals.$inferSelect;
 
+// Service plans table for marketing packages
+export const servicePlans = pgTable("service_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  billingPeriod: varchar("billing_period").default("monthly"), // monthly, once-off, yearly
+  features: text("features").array(),
+  isPopular: boolean("is_popular").default(false),
+  isActive: boolean("is_active").default(true),
+  displayOrder: integer("display_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertServicePlanSchema = createInsertSchema(servicePlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertServicePlan = z.infer<typeof insertServicePlanSchema>;
+export type ServicePlan = typeof servicePlans.$inferSelect;
+
 // OTP verification table for phone login
 export const authOtps = pgTable("auth_otps", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

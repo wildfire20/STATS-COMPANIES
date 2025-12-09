@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Camera, Video, Megaphone, CheckCircle, ArrowRight, Sparkles } from "lucide-react";
+import { Camera, Video, Megaphone, CheckCircle, ArrowRight, Sparkles, Star } from "lucide-react";
 import { motion } from "framer-motion";
-import type { Service } from "@shared/schema";
+import type { Service, ServicePlan } from "@shared/schema";
 
 const serviceCategories = [
   { id: "all", name: "All Services", icon: null },
@@ -32,6 +32,10 @@ export default function Services() {
 
   const { data: services, isLoading } = useQuery<Service[]>({
     queryKey: [selectedCategory !== "all" ? `/api/services?category=${selectedCategory}` : "/api/services"],
+  });
+
+  const { data: servicePlans, isLoading: plansLoading } = useQuery<ServicePlan[]>({
+    queryKey: ["/api/service-plans"],
   });
 
   const getCategoryIcon = (category: string) => {
@@ -83,20 +87,20 @@ export default function Services() {
         <div className="container mx-auto px-4">
           <Tabs defaultValue={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
             <motion.div 
-              className="flex justify-center mb-12"
+              className="flex justify-center mb-12 px-2"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <TabsList className="grid grid-cols-4 w-full max-w-2xl h-auto p-1.5 bg-muted/50 rounded-2xl">
+              <TabsList className="flex flex-wrap sm:grid sm:grid-cols-4 gap-1 sm:gap-0 w-full max-w-2xl h-auto p-1.5 bg-muted/50 rounded-2xl">
                 {serviceCategories.map((category) => (
                   <TabsTrigger
                     key={category.id}
                     value={category.id}
-                    className="rounded-xl py-3 px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all font-medium"
+                    className="flex-1 min-w-[calc(50%-4px)] sm:min-w-0 rounded-xl py-2.5 sm:py-3 px-3 sm:px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all font-medium whitespace-nowrap"
                     data-testid={`tab-${category.id}`}
                   >
-                    {category.icon && <category.icon className="h-4 w-4 mr-2 hidden sm:block" />}
+                    {category.icon && <category.icon className="h-4 w-4 mr-1.5 hidden sm:block" />}
                     <span className="text-xs sm:text-sm">{category.name}</span>
                   </TabsTrigger>
                 ))}
@@ -187,9 +191,100 @@ export default function Services() {
         </div>
       </section>
 
+      {/* Marketing Plans Section */}
+      {servicePlans && servicePlans.length > 0 && (
+        <motion.section 
+          className="py-24 bg-muted/30"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+        >
+          <div className="container mx-auto px-4">
+            <motion.div 
+              className="text-center mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <Badge className="bg-primary/10 text-primary mb-4">
+                <Megaphone className="w-4 h-4 mr-2" />
+                Marketing Packages
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">
+                Our <span className="text-gradient">Marketing Plans</span>
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Choose the perfect digital marketing package for your business
+              </p>
+              <div className="section-divider mt-6" />
+            </motion.div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {servicePlans.map((plan, index) => (
+                <motion.div
+                  key={plan.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card 
+                    className={`flex flex-col h-full relative ${plan.isPopular ? 'ring-2 ring-primary shadow-2xl scale-105' : 'shadow-lg hover:shadow-xl'} transition-all duration-300`}
+                    data-testid={`card-plan-${plan.id}`}
+                  >
+                    {plan.isPopular && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+                        <Badge className="bg-primary text-primary-foreground px-4 py-1">
+                          <Star className="h-3 w-3 mr-1" />
+                          Most Popular
+                        </Badge>
+                      </div>
+                    )}
+                    <CardHeader className="text-center pb-2 pt-8">
+                      <CardTitle className="text-xl font-display">{plan.name}</CardTitle>
+                      {plan.description && (
+                        <CardDescription className="text-sm">{plan.description}</CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                      <div className="text-center mb-6">
+                        <span className="text-4xl font-bold text-primary">R{Number(plan.price).toLocaleString()}</span>
+                        <span className="text-muted-foreground">/{plan.billingPeriod}</span>
+                      </div>
+                      {plan.features && plan.features.length > 0 && (
+                        <ul className="space-y-3">
+                          {plan.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-start gap-3 text-sm">
+                              <CheckCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                              <span className="text-muted-foreground">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                    <CardFooter className="pt-4">
+                      <Link href="/quote" className="w-full">
+                        <Button 
+                          className={`w-full rounded-full ${plan.isPopular ? 'btn-premium' : ''}`}
+                          variant={plan.isPopular ? "default" : "outline"}
+                          data-testid={`button-select-plan-${plan.id}`}
+                        >
+                          Get Started
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </Link>
+                    </CardFooter>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+      )}
+
       {/* CTA Section */}
       <motion.section 
-        className="py-24 bg-muted/30"
+        className="py-24 bg-background"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}

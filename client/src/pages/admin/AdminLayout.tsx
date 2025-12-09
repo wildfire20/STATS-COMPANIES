@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   CreditCard,
   Mail,
-  Camera
+  Camera,
+  FileStack
 } from "lucide-react";
 
 interface AdminStats {
@@ -33,6 +34,7 @@ interface AdminStats {
 const adminNavItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/services", label: "Services", icon: Settings },
+  { href: "/admin/plans", label: "Marketing Plans", icon: FileStack },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/equipment", label: "Equipment", icon: Camera },
   { href: "/admin/promotions", label: "Promotions", icon: Tag },

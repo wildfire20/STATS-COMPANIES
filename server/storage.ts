@@ -18,6 +18,7 @@ import {
   contactSettings, type ContactSetting, type InsertContactSetting,
   equipment, type Equipment, type InsertEquipment,
   equipmentRentals, type EquipmentRental, type InsertEquipmentRental,
+  servicePlans, type ServicePlan, type InsertServicePlan,
   authOtps, type AuthOtp, type InsertAuthOtp,
 } from "@shared/schema";
 import { db } from "./db";
@@ -175,6 +176,14 @@ export interface IStorage {
   
   // Phone user operations
   createPhoneUser(phone: string, firstName?: string, lastName?: string): Promise<User>;
+  
+  // Service plans operations
+  getServicePlans(): Promise<ServicePlan[]>;
+  getActiveServicePlans(): Promise<ServicePlan[]>;
+  getServicePlan(id: string): Promise<ServicePlan | undefined>;
+  createServicePlan(plan: InsertServicePlan): Promise<ServicePlan>;
+  updateServicePlan(id: string, plan: Partial<InsertServicePlan>): Promise<ServicePlan | undefined>;
+  deleteServicePlan(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -922,6 +931,39 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  // Service plans operations
+  async getServicePlans(): Promise<ServicePlan[]> {
+    return db.select().from(servicePlans).orderBy(servicePlans.displayOrder);
+  }
+
+  async getActiveServicePlans(): Promise<ServicePlan[]> {
+    return db.select().from(servicePlans).where(eq(servicePlans.isActive, true)).orderBy(servicePlans.displayOrder);
+  }
+
+  async getServicePlan(id: string): Promise<ServicePlan | undefined> {
+    const [plan] = await db.select().from(servicePlans).where(eq(servicePlans.id, id));
+    return plan;
+  }
+
+  async createServicePlan(plan: InsertServicePlan): Promise<ServicePlan> {
+    const [created] = await db.insert(servicePlans).values(plan).returning();
+    return created;
+  }
+
+  async updateServicePlan(id: string, plan: Partial<InsertServicePlan>): Promise<ServicePlan | undefined> {
+    const [updated] = await db
+      .update(servicePlans)
+      .set({ ...plan, updatedAt: new Date() })
+      .where(eq(servicePlans.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteServicePlan(id: string): Promise<boolean> {
+    await db.delete(servicePlans).where(eq(servicePlans.id, id));
+    return true;
   }
 }
 
