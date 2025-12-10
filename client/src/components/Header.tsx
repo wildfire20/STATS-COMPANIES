@@ -72,18 +72,18 @@ export function Header() {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
     >
       <nav className="container mx-auto flex h-16 md:h-18 items-center justify-between gap-4 px-4">
-        <Link href="/" className="flex items-center gap-3 group" data-testid="link-logo">
+        <Link href="/" className="flex items-center gap-3 group shrink-0" data-testid="link-logo">
           <img 
             src={logoImage} 
             alt="STATS Companies" 
             className="h-10 md:h-11 w-auto transition-transform duration-300 group-hover:scale-105"
           />
-          <span className="hidden font-display font-bold text-lg text-primary dark:text-white md:block tracking-tight">
+          <span className="hidden font-display font-bold text-lg text-primary dark:text-white xl:block tracking-tight whitespace-nowrap">
             STATS COMPANIES
           </span>
         </Link>
 
-        <div className="hidden lg:flex lg:items-center lg:gap-1">
+        <div className="hidden lg:flex lg:items-center lg:gap-1 lg:ml-4">
           {navigation.map((item) => (
             <Button
               key={item.name}
