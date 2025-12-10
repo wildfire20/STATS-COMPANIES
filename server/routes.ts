@@ -443,6 +443,52 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Serve hero video from attached_assets
+  app.get('/api/hero-video', async (req, res) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const videoPath = path.resolve(process.cwd(), 'attached_assets', 'WhatsApp_Video_2025-12-10_at_12.55.27_102c22ad_1765368102642.mp4');
+      
+      if (!fs.existsSync(videoPath)) {
+        return res.status(404).json({ error: 'Hero video not found' });
+      }
+      
+      const stat = fs.statSync(videoPath);
+      const fileSize = stat.size;
+      const range = req.headers.range;
+      
+      if (range) {
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunkSize = end - start + 1;
+        
+        res.status(206);
+        res.set({
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize,
+          'Content-Type': 'video/mp4',
+        });
+        
+        fs.createReadStream(videoPath, { start, end }).pipe(res);
+      } else {
+        res.set({
+          'Content-Type': 'video/mp4',
+          'Content-Length': fileSize,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=31536000',
+        });
+        
+        fs.createReadStream(videoPath).pipe(res);
+      }
+    } catch (error) {
+      console.error('Hero video fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch hero video' });
+    }
+  });
+
   app.get("/api/products", async (req, res) => {
     try {
       const category = req.query.category as string | undefined;

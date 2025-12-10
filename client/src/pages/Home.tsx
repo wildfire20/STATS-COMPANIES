@@ -8,7 +8,6 @@ import { Printer, Camera, Video, Megaphone, ArrowRight, Star, Truck, Shield, Clo
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import type { Testimonial, PortfolioItem, Promotion, Product } from "@shared/schema";
-import logoImage from "@assets/states company logo_1764435536382.jpg";
 
 const services = [
   {
@@ -78,10 +77,33 @@ const scaleIn = {
 
 export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
   });
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.muted = true;
+      
+      const handleCanPlay = () => {
+        video.play().catch(() => {});
+      };
+      
+      video.addEventListener('canplay', handleCanPlay);
+      
+      // Also try to play if already loaded
+      if (video.readyState >= 3) {
+        video.play().catch(() => {});
+      }
+      
+      return () => {
+        video.removeEventListener('canplay', handleCanPlay);
+      };
+    }
+  }, []);
 
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
@@ -240,16 +262,18 @@ export default function Home() {
                   transition={{ duration: 90, repeat: Infinity, ease: "linear" }}
                 />
                 
-                {/* Logo with glow effect */}
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-secondary/40 to-accent/40 rounded-full blur-3xl" />
-                  <motion.img 
-                    src={logoImage} 
-                    alt="STATS Companies" 
-                    className="relative h-72 md:h-80 lg:h-96 w-auto float-animation drop-shadow-2xl"
-                    data-testid="img-hero-logo"
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ type: "spring", stiffness: 300 }}
+                {/* Hero video with glow effect */}
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-secondary/40 to-accent/40 rounded-2xl blur-3xl" />
+                  <video 
+                    ref={videoRef}
+                    src="/api/hero-video" 
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="relative h-72 md:h-80 lg:h-96 w-auto rounded-2xl float-animation drop-shadow-2xl object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    data-testid="video-hero"
                   />
                 </div>
               </div>

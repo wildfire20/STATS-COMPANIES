@@ -57,7 +57,7 @@ A complete e-commerce website for STATS Companies, a digital printing, photograp
 ## Features
 
 ### Pages
-1. **Home** - Hero banner, services overview, portfolio highlights, testimonials, CTAs
+1. **Home** - Hero section with looping video, services overview, portfolio highlights, testimonials, CTAs
 2. **About Us** - Company story, team members, mission/vision, timeline
 3. **Shop** - Product catalog with filtering, search, category navigation
 4. **Services** - Photography, Videography, Digital Marketing offerings
