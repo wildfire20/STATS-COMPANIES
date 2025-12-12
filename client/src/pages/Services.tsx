@@ -12,9 +12,9 @@ import type { Service, ServicePlan } from "@shared/schema";
 
 const serviceCategories = [
   { id: "all", name: "All Services", icon: null },
-  { id: "photography", name: "Photography", icon: Camera },
-  { id: "videography", name: "Videography", icon: Video },
-  { id: "marketing", name: "Digital Marketing", icon: Megaphone },
+  { id: "Photography", name: "Photography", icon: Camera },
+  { id: "Videography", name: "Videography", icon: Video },
+  { id: "Marketing", name: "Digital Marketing", icon: Megaphone },
 ];
 
 const fadeInUp = {
@@ -40,9 +40,9 @@ export default function Services() {
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case "photography": return Camera;
-      case "videography": return Video;
-      case "marketing": return Megaphone;
+      case "Photography": return Camera;
+      case "Videography": return Video;
+      case "Marketing": return Megaphone;
       default: return Camera;
     }
   };
@@ -192,7 +192,7 @@ export default function Services() {
       </section>
 
       {/* Marketing Plans Section - Only show for Digital Marketing category */}
-      {selectedCategory === "marketing" && servicePlans && servicePlans.length > 0 && (
+      {selectedCategory === "Marketing" && servicePlans && servicePlans.length > 0 && (
         <motion.section 
           className="py-24 bg-muted/30"
           initial={{ opacity: 0 }}
