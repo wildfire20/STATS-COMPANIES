@@ -191,8 +191,8 @@ export default function Services() {
         </div>
       </section>
 
-      {/* Marketing Plans Section */}
-      {servicePlans && servicePlans.length > 0 && (
+      {/* Marketing Plans Section - Only show for Digital Marketing category */}
+      {selectedCategory === "marketing" && servicePlans && servicePlans.length > 0 && (
         <motion.section 
           className="py-24 bg-muted/30"
           initial={{ opacity: 0 }}
