@@ -114,8 +114,6 @@ export default function Checkout() {
       case "pay_on_delivery":
       case "cash_on_delivery":
         return Truck;
-      case "stripe":
-        return CreditCard;
       case "instant_eft":
         return Zap;
       default:

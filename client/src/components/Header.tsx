@@ -16,7 +16,7 @@ import { CartButton } from "@/components/CartDrawer";
 import { Menu, Search, User, LogOut, Settings, X, LayoutDashboard, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
-import logoImage from "@assets/states company logo_1764435536382.jpg";
+import logoImage from "@assets/stats_business_card_1765625638234.png";
 
 const navigation = [
   { name: "Home", href: "/" },

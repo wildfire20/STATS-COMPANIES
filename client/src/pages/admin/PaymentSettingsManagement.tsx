@@ -19,7 +19,6 @@ import type { PaymentSetting } from "@shared/schema";
 const methodTypes = [
   { id: "bank_transfer", name: "Bank Transfer (EFT)", icon: Building2 },
   { id: "cash_on_delivery", name: "Pay on Delivery", icon: Truck },
-  { id: "stripe", name: "Stripe (Credit/Debit Cards)", icon: CreditCard },
   { id: "instant_eft", name: "Instant EFT", icon: Zap },
 ];
 

@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Target, Eye, Heart, Award, Sparkles, Users, Briefcase, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import type { TeamMember } from "@shared/schema";
-import logoImage from "@assets/states company logo_1764435536382.jpg";
+import logoImage from "@assets/stats_business_card_1765625638234.png";
 
 const stats = [
   { icon: Calendar, value: "2020", label: "Year Founded" },

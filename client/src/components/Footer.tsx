@@ -4,7 +4,7 @@ import { Phone, Mail, MapPin, ArrowUpRight, Sparkles } from "lucide-react";
 import { SiFacebook, SiInstagram, SiWhatsapp, SiLinkedin, SiYoutube, SiTiktok } from "react-icons/si";
 import { FaXTwitter } from "react-icons/fa6";
 import { motion } from "framer-motion";
-import logoImage from "@assets/states company logo_1764435536382.jpg";
+import logoImage from "@assets/stats_business_card_1765625638234.png";
 
 const footerLinks = {
   quickLinks: [

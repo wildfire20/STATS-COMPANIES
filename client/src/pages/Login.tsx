@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, X, ArrowLeft, Phone, Smartphone } from "lucide-react";
 import { SiGoogle, SiApple } from "react-icons/si";
-import statsLogo from "@assets/states company logo_1764435536382.jpg";
+import statsLogo from "@assets/stats_business_card_1765625638234.png";
 
 function MicrosoftIcon({ className }: { className?: string }) {
   return (
