@@ -1,0 +1,14 @@
+# robots.txt for STATS Companies
+# https://statscompanies.co.za
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://statscompanies.co.za/sitemap.xml
+
+# Disallow backend API endpoints only
+Disallow: /api/
+
+# Crawl-delay for politeness
+Crawl-delay: 1
