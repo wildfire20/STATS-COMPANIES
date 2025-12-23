@@ -78,6 +78,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   
   await seedAdminUser();
 
+  // Health check endpoint for Railway
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   app.post('/api/auth/local/login', async (req, res) => {
     try {
       const { email, password } = req.body;
