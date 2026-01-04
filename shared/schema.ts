@@ -553,3 +553,29 @@ export const insertAuthOtpSchema = createInsertSchema(authOtps).omit({
 
 export type InsertAuthOtp = z.infer<typeof insertAuthOtpSchema>;
 export type AuthOtp = typeof authOtps.$inferSelect;
+
+// Demo accounts table for client exploration
+export const demoAccounts = pgTable("demo_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  accessCode: varchar("access_code").notNull().unique(),
+  email: varchar("email").notNull(),
+  name: varchar("name").notNull(),
+  company: varchar("company"),
+  phone: varchar("phone"),
+  notes: text("notes"),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastAccessedAt: timestamp("last_accessed_at"),
+  accessCount: integer("access_count").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertDemoAccountSchema = createInsertSchema(demoAccounts).omit({
+  id: true,
+  accessCount: true,
+  lastAccessedAt: true,
+  createdAt: true,
+});
+
+export type InsertDemoAccount = z.infer<typeof insertDemoAccountSchema>;
+export type DemoAccount = typeof demoAccounts.$inferSelect;

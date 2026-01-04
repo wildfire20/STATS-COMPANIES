@@ -36,6 +36,9 @@ import TeamManagement from "@/pages/admin/TeamManagement";
 import PaymentSettingsManagement from "@/pages/admin/PaymentSettingsManagement";
 import ContactSettingsManagement from "@/pages/admin/ContactSettingsManagement";
 import EquipmentManagement from "@/pages/admin/EquipmentManagement";
+import DemoAccountsManagement from "@/pages/admin/DemoAccountsManagement";
+
+import DemoLogin from "@/pages/DemoLogin";
 
 import ClientDashboard from "@/pages/client/Dashboard";
 import ClientOrders from "@/pages/client/Orders";
@@ -73,6 +76,7 @@ function Router() {
       <Route path="/admin/payments" component={PaymentSettingsManagement} />
       <Route path="/admin/contact" component={ContactSettingsManagement} />
       <Route path="/admin/equipment" component={EquipmentManagement} />
+      <Route path="/admin/demo-accounts" component={DemoAccountsManagement} />
 
       <Route path="/dashboard" component={ClientDashboard} />
       <Route path="/dashboard/orders/:id" component={ClientOrders} />
@@ -106,6 +110,7 @@ function App() {
         <CartProvider>
           <Switch>
             <Route path="/login" component={Login} />
+            <Route path="/demo" component={DemoLogin} />
             <Route path="/admin/:rest*">
               {() => <Router />}
             </Route>

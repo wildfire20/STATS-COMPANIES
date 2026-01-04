@@ -2244,4 +2244,138 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ error: "Failed to delete rental" });
     }
   });
+
+  // Demo Account Routes
+  // Public demo login endpoint
+  app.post("/api/demo/login", async (req, res) => {
+    try {
+      const { accessCode } = req.body;
+      
+      if (!accessCode) {
+        return res.status(400).json({ message: "Access code is required" });
+      }
+
+      const demoAccount = await storage.getDemoAccountByCode(accessCode.toUpperCase());
+      
+      if (!demoAccount) {
+        return res.status(401).json({ message: "Invalid or expired demo access code" });
+      }
+
+      // Record the access
+      await storage.recordDemoAccess(demoAccount.id);
+
+      // Set demo session
+      (req.session as any).demoAccess = true;
+      (req.session as any).demoAccountId = demoAccount.id;
+      (req.session as any).demoAccountName = demoAccount.name;
+      (req.session as any).demoExpiresAt = demoAccount.expiresAt;
+
+      res.json({ 
+        success: true,
+        name: demoAccount.name,
+        expiresAt: demoAccount.expiresAt
+      });
+    } catch (error) {
+      console.error("Demo login error:", error);
+      res.status(500).json({ message: "Demo login failed" });
+    }
+  });
+
+  // Check demo session status
+  app.get("/api/demo/status", (req, res) => {
+    const session = req.session as any;
+    if (session?.demoAccess && session?.demoExpiresAt) {
+      const expiresAt = new Date(session.demoExpiresAt);
+      if (expiresAt > new Date()) {
+        return res.json({ 
+          isDemo: true, 
+          name: session.demoAccountName,
+          expiresAt: session.demoExpiresAt 
+        });
+      }
+    }
+    res.json({ isDemo: false });
+  });
+
+  // Demo logout
+  app.post("/api/demo/logout", (req, res) => {
+    const session = req.session as any;
+    delete session.demoAccess;
+    delete session.demoAccountId;
+    delete session.demoAccountName;
+    delete session.demoExpiresAt;
+    res.json({ success: true });
+  });
+
+  // Admin Demo Account Management Routes
+  app.get("/api/admin/demo-accounts", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const accounts = await storage.getDemoAccounts();
+      res.json(accounts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch demo accounts" });
+    }
+  });
+
+  app.post("/api/admin/demo-accounts", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { name, email, company, phone, notes, expiresInHours } = req.body;
+      
+      if (!name || !email || !expiresInHours) {
+        return res.status(400).json({ error: "Name, email, and expiration time are required" });
+      }
+
+      // Generate unique access code (8 characters)
+      const accessCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+      
+      const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
+
+      const account = await storage.createDemoAccount({
+        accessCode,
+        name,
+        email,
+        company,
+        phone,
+        notes,
+        expiresAt,
+        isActive: true,
+      });
+
+      res.status(201).json(account);
+    } catch (error) {
+      console.error("Error creating demo account:", error);
+      res.status(500).json({ error: "Failed to create demo account" });
+    }
+  });
+
+  app.put("/api/admin/demo-accounts/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const account = await storage.updateDemoAccount(req.params.id, req.body);
+      if (!account) {
+        return res.status(404).json({ error: "Demo account not found" });
+      }
+      res.json(account);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update demo account" });
+    }
+  });
+
+  app.delete("/api/admin/demo-accounts/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteDemoAccount(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete demo account" });
+    }
+  });
+
+  // Cleanup expired demo accounts (can be called periodically)
+  app.post("/api/admin/demo-accounts/cleanup", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      await storage.deleteExpiredDemoAccounts();
+      res.json({ success: true, message: "Expired demo accounts cleaned up" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to cleanup demo accounts" });
+    }
+  });
 }

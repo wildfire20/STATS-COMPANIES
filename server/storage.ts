@@ -20,6 +20,7 @@ import {
   equipmentRentals, type EquipmentRental, type InsertEquipmentRental,
   servicePlans, type ServicePlan, type InsertServicePlan,
   authOtps, type AuthOtp, type InsertAuthOtp,
+  demoAccounts, type DemoAccount, type InsertDemoAccount,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, sql, gt } from "drizzle-orm";
@@ -184,6 +185,16 @@ export interface IStorage {
   createServicePlan(plan: InsertServicePlan): Promise<ServicePlan>;
   updateServicePlan(id: string, plan: Partial<InsertServicePlan>): Promise<ServicePlan | undefined>;
   deleteServicePlan(id: string): Promise<boolean>;
+  
+  // Demo accounts operations
+  getDemoAccounts(): Promise<DemoAccount[]>;
+  getDemoAccount(id: string): Promise<DemoAccount | undefined>;
+  getDemoAccountByCode(accessCode: string): Promise<DemoAccount | undefined>;
+  createDemoAccount(account: InsertDemoAccount): Promise<DemoAccount>;
+  updateDemoAccount(id: string, account: Partial<InsertDemoAccount>): Promise<DemoAccount | undefined>;
+  deleteDemoAccount(id: string): Promise<boolean>;
+  recordDemoAccess(id: string): Promise<void>;
+  deleteExpiredDemoAccounts(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -964,6 +975,64 @@ export class DatabaseStorage implements IStorage {
   async deleteServicePlan(id: string): Promise<boolean> {
     await db.delete(servicePlans).where(eq(servicePlans.id, id));
     return true;
+  }
+
+  // Demo accounts operations
+  async getDemoAccounts(): Promise<DemoAccount[]> {
+    return db.select().from(demoAccounts).orderBy(desc(demoAccounts.createdAt));
+  }
+
+  async getDemoAccount(id: string): Promise<DemoAccount | undefined> {
+    const [account] = await db.select().from(demoAccounts).where(eq(demoAccounts.id, id));
+    return account;
+  }
+
+  async getDemoAccountByCode(accessCode: string): Promise<DemoAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(demoAccounts)
+      .where(
+        and(
+          eq(demoAccounts.accessCode, accessCode),
+          eq(demoAccounts.isActive, true),
+          gt(demoAccounts.expiresAt, new Date())
+        )
+      );
+    return account;
+  }
+
+  async createDemoAccount(account: InsertDemoAccount): Promise<DemoAccount> {
+    const [created] = await db.insert(demoAccounts).values(account).returning();
+    return created;
+  }
+
+  async updateDemoAccount(id: string, account: Partial<InsertDemoAccount>): Promise<DemoAccount | undefined> {
+    const [updated] = await db
+      .update(demoAccounts)
+      .set(account)
+      .where(eq(demoAccounts.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteDemoAccount(id: string): Promise<boolean> {
+    await db.delete(demoAccounts).where(eq(demoAccounts.id, id));
+    return true;
+  }
+
+  async recordDemoAccess(id: string): Promise<void> {
+    await db
+      .update(demoAccounts)
+      .set({ 
+        lastAccessedAt: new Date(),
+        accessCount: sql`access_count + 1`
+      })
+      .where(eq(demoAccounts.id, id));
+  }
+
+  async deleteExpiredDemoAccounts(): Promise<void> {
+    const now = new Date();
+    await db.delete(demoAccounts).where(sql`expires_at < ${now}`);
   }
 }
 

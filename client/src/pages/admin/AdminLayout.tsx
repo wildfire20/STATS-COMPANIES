@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useDemo } from "@/hooks/useDemo";
 import { useToast } from "@/hooks/use-toast";
+import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -21,7 +23,8 @@ import {
   CreditCard,
   Mail,
   Camera,
-  FileStack
+  FileStack,
+  Eye
 } from "lucide-react";
 
 interface AdminStats {
@@ -46,6 +49,7 @@ const adminNavItems = [
   { href: "/admin/team", label: "Team", icon: Users },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/contact", label: "Contact", icon: Mail },
+  { href: "/admin/demo-accounts", label: "Demo Access", icon: Eye },
 ];
 
 interface AdminLayoutProps {
@@ -55,6 +59,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const { user, isAuthenticated, isLoading, isAdmin } = useAuth();
+  const { isDemo, demoName, demoExpiresAt, isLoading: demoLoading } = useDemo();
   const { toast } = useToast();
   const [location] = useLocation();
   
@@ -75,29 +80,33 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     }
   };
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "Please log in to access the admin panel.",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-    } else if (!isLoading && isAuthenticated && !isAdmin) {
-      toast({
-        title: "Access Denied",
-        description: "You don't have admin privileges.",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
-    }
-  }, [isAuthenticated, isLoading, isAdmin, toast]);
+  const hasAccess = (isAuthenticated && isAdmin) || isDemo;
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading && !demoLoading && !hasAccess) {
+      if (!isAuthenticated) {
+        toast({
+          title: "Unauthorized",
+          description: "Please log in to access the admin panel.",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+      } else if (isAuthenticated && !isAdmin) {
+        toast({
+          title: "Access Denied",
+          description: "You don't have admin privileges.",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 500);
+      }
+    }
+  }, [isAuthenticated, isLoading, isAdmin, isDemo, demoLoading, hasAccess, toast]);
+
+  if (isLoading || demoLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -105,7 +114,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     );
   }
 
-  if (!isAuthenticated || !isAdmin) {
+  if (!hasAccess) {
     return null;
   }
 
@@ -167,6 +176,32 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       </aside>
 
       <main className="flex-1 overflow-auto">
+        {isDemo && (
+          <div className="bg-yellow-500/20 border-b border-yellow-500/50 px-4 py-2">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-yellow-600" />
+                <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  Demo Mode - Welcome, {demoName}!
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-yellow-700 dark:text-yellow-300">
+                  Expires: {demoExpiresAt ? formatDistanceToNow(demoExpiresAt, { addSuffix: true }) : "Unknown"}
+                </span>
+                <a href="/api/demo/logout" onClick={async (e) => {
+                  e.preventDefault();
+                  await fetch("/api/demo/logout", { method: "POST" });
+                  window.location.href = "/";
+                }}>
+                  <Button size="sm" variant="outline" className="h-7 text-xs">
+                    Exit Demo
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
         <header className="bg-card border-b p-4">
           <h2 className="text-xl font-semibold">{title}</h2>
         </header>
