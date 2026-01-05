@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,7 +24,9 @@ import {
   Mail,
   Camera,
   FileStack,
-  Eye
+  Eye,
+  Menu,
+  X
 } from "lucide-react";
 
 interface AdminStats {
@@ -62,6 +64,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const { isDemo, demoName, demoExpiresAt, isLoading: demoLoading } = useDemo();
   const { toast } = useToast();
   const [location] = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const { data: stats } = useQuery<AdminStats>({
     queryKey: ["/api/admin/stats"],
@@ -118,23 +121,49 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     return null;
   }
 
+  const closeSidebar = () => setSidebarOpen(false);
+
   return (
     <div className="min-h-screen flex bg-muted">
-      <aside className="w-64 bg-card border-r flex flex-col">
-        <div className="p-4 border-b">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="mb-2">
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back to Site
-            </Button>
-          </Link>
-          <h1 className="font-bold text-lg text-primary">STATS Admin</h1>
-          <p className="text-sm text-muted-foreground">
-            {user?.firstName} {user?.lastName}
-          </p>
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={closeSidebar}
+          data-testid="sidebar-overlay"
+        />
+      )}
+
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-64 bg-card border-r flex flex-col
+        transform transition-transform duration-200 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
+        <div className="p-4 border-b flex items-center justify-between">
+          <div>
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="mb-2">
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back to Site
+              </Button>
+            </Link>
+            <h1 className="font-bold text-lg text-primary">STATS Admin</h1>
+            <p className="text-sm text-muted-foreground">
+              {isDemo ? demoName : `${user?.firstName} ${user?.lastName}`}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={closeSidebar}
+            data-testid="button-close-sidebar"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
         
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {adminNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.href || 
@@ -142,7 +171,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
             const badgeCount = getBadgeCount(item.label);
             
             return (
-              <Link key={item.href} href={item.href}>
+              <Link key={item.href} href={item.href} onClick={closeSidebar}>
                 <Button
                   variant={isActive ? "secondary" : "ghost"}
                   className="w-full justify-start"
@@ -166,46 +195,58 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
         </nav>
 
         <div className="p-4 border-t">
-          <a href="/api/logout">
-            <Button variant="outline" className="w-full">
+          {isDemo ? (
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={async () => {
+                await fetch("/api/demo/logout", { method: "POST" });
+                window.location.href = "/";
+              }}
+            >
               <LogOut className="h-4 w-4 mr-2" />
-              Logout
+              Exit Demo
             </Button>
-          </a>
+          ) : (
+            <a href="/api/logout">
+              <Button variant="outline" className="w-full">
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </a>
+          )}
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto w-full">
         {isDemo && (
           <div className="bg-yellow-500/20 border-b border-yellow-500/50 px-4 py-2">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-yellow-600" />
                 <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                  Demo Mode - Welcome, {demoName}!
+                  Demo Mode
                 </span>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-yellow-700 dark:text-yellow-300">
-                  Expires: {demoExpiresAt ? formatDistanceToNow(demoExpiresAt, { addSuffix: true }) : "Unknown"}
-                </span>
-                <a href="/api/demo/logout" onClick={async (e) => {
-                  e.preventDefault();
-                  await fetch("/api/demo/logout", { method: "POST" });
-                  window.location.href = "/";
-                }}>
-                  <Button size="sm" variant="outline" className="h-7 text-xs">
-                    Exit Demo
-                  </Button>
-                </a>
-              </div>
+              <span className="text-xs text-yellow-700 dark:text-yellow-300">
+                Expires: {demoExpiresAt ? formatDistanceToNow(demoExpiresAt, { addSuffix: true }) : "Unknown"}
+              </span>
             </div>
           </div>
         )}
-        <header className="bg-card border-b p-4">
+        <header className="bg-card border-b p-4 flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+            data-testid="button-open-sidebar"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
           <h2 className="text-xl font-semibold">{title}</h2>
         </header>
-        <div className="p-6">
+        <div className="p-4 md:p-6">
           {children}
         </div>
       </main>
