@@ -19,28 +19,28 @@ const heroImages = [heroImage1, heroImage2];
 
 const services = [
   {
-    iconImage: iconPrinting,
+    iconImage: iconMarketing,
     title: "Digital Printing",
     description: "Business cards, flyers, banners, apparel, stickers, and large format printing.",
     href: "/shop",
     gradient: "from-blue-500/20 to-cyan-500/20",
   },
   {
-    iconImage: iconPhotography,
+    iconImage: iconPrinting,
     title: "Photography",
     description: "Event coverage, studio shoots, corporate portraits, weddings, and product photography.",
     href: "/services?category=photography",
     gradient: "from-purple-500/20 to-pink-500/20",
   },
   {
-    iconImage: iconVideography,
+    iconImage: iconPhotography,
     title: "Videography",
     description: "Event videos, corporate films, social media content, and wedding cinematography.",
     href: "/services?category=videography",
     gradient: "from-orange-500/20 to-red-500/20",
   },
   {
-    iconImage: iconMarketing,
+    iconImage: iconVideography,
     title: "Digital Marketing",
     description: "Social media management, paid ads, content creation, and brand identity design.",
     href: "/services?category=marketing",
