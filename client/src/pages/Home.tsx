@@ -5,9 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Printer, Camera, Video, Megaphone, ArrowRight, Star, Truck, Shield, Clock, ChevronRight, Quote, Sparkles, Play, MousePointer } from "lucide-react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import type { Testimonial, PortfolioItem, Promotion, Product } from "@shared/schema";
+import heroImage1 from "@assets/hero-1.png";
+import heroImage2 from "@assets/hero-2.png";
+
+const heroImages = [heroImage1, heroImage2];
 
 const services = [
   {
@@ -77,32 +81,17 @@ const scaleIn = {
 
 export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"]
   });
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (video) {
-      video.muted = true;
-      
-      const handleCanPlay = () => {
-        video.play().catch(() => {});
-      };
-      
-      video.addEventListener('canplay', handleCanPlay);
-      
-      // Also try to play if already loaded
-      if (video.readyState >= 3) {
-        video.play().catch(() => {});
-      }
-      
-      return () => {
-        video.removeEventListener('canplay', handleCanPlay);
-      };
-    }
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % heroImages.length);
+    }, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
@@ -262,19 +251,39 @@ export default function Home() {
                   transition={{ duration: 90, repeat: Infinity, ease: "linear" }}
                 />
                 
-                {/* Hero video with glow effect */}
+                {/* Hero image slideshow with glow effect */}
                 <div className="relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-secondary/40 to-accent/40 rounded-2xl blur-3xl" />
-                  <video 
-                    ref={videoRef}
-                    src="/api/hero-video" 
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="relative h-72 md:h-80 lg:h-96 w-auto rounded-2xl float-animation drop-shadow-2xl object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                    data-testid="video-hero"
-                  />
+                  <div className="relative h-72 md:h-80 lg:h-96 w-72 md:w-80 lg:w-96 rounded-2xl overflow-hidden float-animation drop-shadow-2xl">
+                    <AnimatePresence mode="wait">
+                      <motion.img 
+                        key={currentImageIndex}
+                        src={heroImages[currentImageIndex]}
+                        alt="STATS Companies - Professional Photography and Printing"
+                        initial={{ opacity: 0, scale: 1.1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.7, ease: "easeInOut" }}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                        data-testid="image-hero"
+                      />
+                    </AnimatePresence>
+                  </div>
+                  {/* Image indicators */}
+                  <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+                    {heroImages.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          index === currentImageIndex 
+                            ? 'bg-white w-6' 
+                            : 'bg-white/40 hover:bg-white/60'
+                        }`}
+                        data-testid={`button-hero-indicator-${index}`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </motion.div>
