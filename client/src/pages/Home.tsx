@@ -456,7 +456,7 @@ export default function Home() {
                     <CardHeader className="pb-4 relative">
                       <div className={`absolute inset-0 bg-gradient-to-br ${service.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
                       <motion.div 
-                        className="w-16 h-16 mx-auto mb-4 relative z-10"
+                        className="w-24 h-24 mx-auto mb-4 relative z-10 flex items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20 p-4"
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         transition={{ type: "spring", stiffness: 400 }}
                       >
