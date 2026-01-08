@@ -258,7 +258,7 @@ export default function Home() {
                 {/* Hero image slideshow with glow effect */}
                 <div className="relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-secondary/40 to-accent/40 rounded-2xl blur-3xl" />
-                  <div className="relative h-72 md:h-80 lg:h-96 w-72 md:w-80 lg:w-96 rounded-2xl overflow-hidden float-animation drop-shadow-2xl">
+                  <div className="relative h-80 md:h-96 lg:h-[450px] w-80 md:w-96 lg:w-[450px] rounded-2xl overflow-hidden float-animation drop-shadow-2xl">
                     <AnimatePresence mode="wait">
                       <motion.img 
                         key={currentImageIndex}
