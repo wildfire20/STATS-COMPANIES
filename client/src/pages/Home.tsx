@@ -10,33 +10,37 @@ import { useEffect, useRef, useState } from "react";
 import type { Testimonial, PortfolioItem, Promotion, Product } from "@shared/schema";
 import heroImage1 from "@assets/hero-1.png";
 import heroImage2 from "@assets/hero-2.png";
+import iconPrinting from "@assets/icon-printing.png";
+import iconPhotography from "@assets/icon-photography.png";
+import iconVideography from "@assets/icon-videography.png";
+import iconMarketing from "@assets/icon-marketing.png";
 
 const heroImages = [heroImage1, heroImage2];
 
 const services = [
   {
-    icon: Printer,
+    iconImage: iconPrinting,
     title: "Digital Printing",
     description: "Business cards, flyers, banners, apparel, stickers, and large format printing.",
     href: "/shop",
     gradient: "from-blue-500/20 to-cyan-500/20",
   },
   {
-    icon: Camera,
+    iconImage: iconPhotography,
     title: "Photography",
     description: "Event coverage, studio shoots, corporate portraits, weddings, and product photography.",
     href: "/services?category=photography",
     gradient: "from-purple-500/20 to-pink-500/20",
   },
   {
-    icon: Video,
+    iconImage: iconVideography,
     title: "Videography",
     description: "Event videos, corporate films, social media content, and wedding cinematography.",
     href: "/services?category=videography",
     gradient: "from-orange-500/20 to-red-500/20",
   },
   {
-    icon: Megaphone,
+    iconImage: iconMarketing,
     title: "Digital Marketing",
     description: "Social media management, paid ads, content creation, and brand identity design.",
     href: "/services?category=marketing",
@@ -452,11 +456,15 @@ export default function Home() {
                     <CardHeader className="pb-4 relative">
                       <div className={`absolute inset-0 bg-gradient-to-br ${service.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
                       <motion.div 
-                        className="icon-container-lg mx-auto mb-4 relative z-10"
+                        className="w-16 h-16 mx-auto mb-4 relative z-10"
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         transition={{ type: "spring", stiffness: 400 }}
                       >
-                        <service.icon className="h-8 w-8 text-primary dark:text-accent" />
+                        <img 
+                          src={service.iconImage} 
+                          alt={service.title}
+                          className="w-full h-full object-contain"
+                        />
                       </motion.div>
                       <CardTitle className="text-xl font-display text-center relative z-10">{service.title}</CardTitle>
                     </CardHeader>
