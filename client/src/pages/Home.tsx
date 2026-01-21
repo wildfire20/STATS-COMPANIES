@@ -98,9 +98,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
-  const heroY = useTransform(scrollYProgress, [0, 0.5], [0, 50]);
+  // Scroll animations disabled for hero section
 
   const { data: testimonials, isLoading: testimonialsLoading } = useQuery<Testimonial[]>({
     queryKey: ["/api/testimonials?featured=true"],
@@ -124,7 +122,6 @@ export default function Home() {
       <motion.section 
         ref={heroRef}
         className="relative min-h-[100vh] flex items-center hero-gradient-animated overflow-hidden"
-        style={{ opacity: heroOpacity }}
       >
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
@@ -160,7 +157,6 @@ export default function Home() {
         <div className="container mx-auto px-4 py-20 relative z-10">
           <motion.div 
             className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center"
-            style={{ scale: heroScale, y: heroY }}
           >
             <motion.div 
               className="space-y-8"
@@ -180,7 +176,7 @@ export default function Home() {
                 variants={fadeInUp}
                 data-testid="text-hero-title"
               >
-                Dream It,
+                You Dream It,
                 <span className="block text-gradient-light">We Make It</span>
               </motion.h1>
               
