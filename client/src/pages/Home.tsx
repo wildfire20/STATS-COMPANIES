@@ -7,7 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Printer, Camera, Video, Megaphone, ArrowRight, Star, Truck, Shield, Clock, ChevronRight, Quote, Sparkles, Play, MousePointer } from "lucide-react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import type { Testimonial, PortfolioItem, Promotion, Product } from "@shared/schema";
+import type { Testimonial, PortfolioItem, Promotion, Product, ServicePlan } from "@shared/schema";
+import { CardFooter } from "@/components/ui/card";
+import { CheckCircle } from "lucide-react";
 import heroImage1 from "@assets/hero-1.png";
 import heroImage2 from "@assets/hero-2.png";
 import iconPrinting from "@assets/icon-printing.png";
@@ -114,6 +116,10 @@ export default function Home() {
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
+  });
+
+  const { data: servicePlans, isLoading: plansLoading } = useQuery<ServicePlan[]>({
+    queryKey: ["/api/service-plans"],
   });
 
   return (
@@ -473,6 +479,111 @@ export default function Home() {
           </div>
         </div>
       </motion.section>
+
+      {/* Marketing Plans Section */}
+      {servicePlans && servicePlans.length > 0 && (
+        <motion.section 
+          className="py-24 bg-gradient-to-b from-primary/5 to-background"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+        >
+          <div className="container mx-auto px-4">
+            <motion.div 
+              className="text-center mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <Badge className="bg-primary/10 text-primary mb-4">
+                <Megaphone className="w-4 h-4 mr-2" />
+                Marketing Packages
+              </Badge>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold mb-4" data-testid="text-marketing-plans-title">
+                Our <span className="text-gradient">Marketing Plans</span>
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Choose the perfect digital marketing package to grow your business and reach more customers
+              </p>
+              <div className="section-divider mt-6" />
+            </motion.div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {servicePlans.map((plan, index) => (
+                <motion.div
+                  key={plan.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card 
+                    className={`flex flex-col h-full relative ${plan.isPopular ? 'ring-2 ring-primary shadow-2xl scale-105' : 'shadow-lg hover:shadow-xl'} transition-all duration-300`}
+                    data-testid={`card-marketing-plan-${plan.id}`}
+                  >
+                    {plan.isPopular && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
+                        <Badge className="bg-primary text-primary-foreground px-4 py-1">
+                          <Star className="h-3 w-3 mr-1" />
+                          Most Popular
+                        </Badge>
+                      </div>
+                    )}
+                    <CardHeader className="text-center pb-2 pt-8">
+                      <CardTitle className="text-xl font-display">{plan.name}</CardTitle>
+                      {plan.description && (
+                        <CardDescription className="text-sm">{plan.description}</CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                      <div className="text-center mb-6">
+                        <span className="text-4xl font-bold text-primary">R{Number(plan.price).toLocaleString()}</span>
+                        <span className="text-muted-foreground">/{plan.billingPeriod}</span>
+                      </div>
+                      {plan.features && plan.features.length > 0 && (
+                        <ul className="space-y-3">
+                          {plan.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-start gap-3 text-sm">
+                              <CheckCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                              <span className="text-muted-foreground">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                    <CardFooter className="pt-4">
+                      <Link href="/quote" className="w-full">
+                        <Button 
+                          className={`w-full rounded-full ${plan.isPopular ? 'btn-premium' : ''}`}
+                          variant={plan.isPopular ? "default" : "outline"}
+                          data-testid={`button-plan-${plan.id}`}
+                        >
+                          Get Started
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      </Link>
+                    </CardFooter>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+            
+            <motion.div 
+              className="text-center mt-10"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+            >
+              <Link href="/services?category=Marketing">
+                <Button variant="outline" size="lg" className="rounded-full" data-testid="button-view-all-plans">
+                  View All Plans
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </motion.div>
+          </div>
+        </motion.section>
+      )}
 
       {/* Products Section */}
       <motion.section 
