@@ -167,7 +167,7 @@ export default function Home() {
               <motion.div variants={fadeInUp}>
                 <Badge className="bg-white/10 text-white border-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium" data-testid="badge-tagline">
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Welcome to Stats Company
+                  Welcome to Stats Companies
                 </Badge>
               </motion.div>
               
