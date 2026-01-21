@@ -57,7 +57,7 @@ const features = [
 const stats = [
   { value: "500+", label: "Projects Completed" },
   { value: "150+", label: "Happy Clients" },
-  { value: "5", label: "Years Experience" },
+  { value: "7", label: "Years Experience" },
   { value: "24/7", label: "Support Available" },
 ];
 
@@ -171,7 +171,7 @@ export default function Home() {
               <motion.div variants={fadeInUp}>
                 <Badge className="bg-white/10 text-white border-white/20 backdrop-blur-sm px-4 py-2 text-sm font-medium" data-testid="badge-tagline">
                   <Sparkles className="w-4 h-4 mr-2" />
-                  You dream it, We make it
+                  Welcome to Stats Company
                 </Badge>
               </motion.div>
               
@@ -180,9 +180,8 @@ export default function Home() {
                 variants={fadeInUp}
                 data-testid="text-hero-title"
               >
-                Transform
-                <span className="block text-gradient-light">Your Vision</span>
-                <span className="block">Into Reality</span>
+                Dream It,
+                <span className="block text-gradient-light">We Make It</span>
               </motion.h1>
               
               <motion.p 
@@ -221,17 +220,14 @@ export default function Home() {
               </motion.div>
 
               {/* Stats Row */}
-              <motion.div 
-                className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-white/10"
-                variants={fadeInUp}
-              >
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-white/10">
                 {stats.map((stat, index) => (
                   <div key={index} className="text-center sm:text-left">
                     <div className="text-3xl md:text-4xl font-display font-bold text-white">{stat.value}</div>
                     <div className="text-sm text-white/50 mt-1">{stat.label}</div>
                   </div>
                 ))}
-              </motion.div>
+              </div>
             </motion.div>
 
             <motion.div 
