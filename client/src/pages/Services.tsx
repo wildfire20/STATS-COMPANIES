@@ -6,13 +6,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Camera, Video, Megaphone, CheckCircle, ArrowRight, Sparkles, Star } from "lucide-react";
+import { Camera, Video, Megaphone, CheckCircle, ArrowRight, Sparkles, Star, Printer } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Service, ServicePlan } from "@shared/schema";
 
 const serviceCategories = [
   { id: "all", name: "All Services", icon: null },
-  { id: "Photography", name: "Photography", icon: Camera },
+  { id: "Printing", name: "Printing", icon: Printer },
   { id: "Videography", name: "Videography", icon: Video },
   { id: "Marketing", name: "Digital Marketing", icon: Megaphone },
 ];

@@ -480,6 +480,84 @@ export default function Home() {
         </div>
       </motion.section>
 
+      {/* Products Section */}
+      <motion.section 
+        className="py-24 bg-muted/30"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+      >
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <div>
+              <Badge className="mb-4 bg-accent/10 text-accent-foreground border-accent/20">Shop</Badge>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold">
+                Popular
+                <span className="text-gradient ml-2">Products</span>
+              </h2>
+            </div>
+            <Link href="/shop">
+              <Button variant="ghost" className="gap-2 group" data-testid="link-view-all-products">
+                View All Products
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </motion.div>
+          
+          {productsLoading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Array(4).fill(0).map((_, i) => (
+                <Skeleton key={i} className="aspect-[4/5] rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {products?.slice(0, 4).map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Link href="/shop">
+                    <Card className="overflow-hidden group cursor-pointer border-0 shadow-lg hover:shadow-2xl transition-all duration-500" data-testid={`card-product-${product.id}`}>
+                      <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/10 flex items-center justify-center relative overflow-hidden img-hover-zoom">
+                        {product.image ? (
+                          <img 
+                            src={product.image} 
+                            alt={product.name}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            data-testid={`img-product-${product.id}`}
+                          />
+                        ) : (
+                          <Printer className="h-20 w-20 text-primary/20" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      </div>
+                      <CardContent className="p-5">
+                        <Badge variant="secondary" className="mb-2 text-xs">{product.category}</Badge>
+                        <h3 className="font-display font-semibold text-lg mb-1 group-hover:text-primary transition-colors">{product.name}</h3>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{product.description}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xl font-display font-bold text-primary">From R{product.basePrice}</span>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.section>
+
       {/* Marketing Plans Section */}
       {servicePlans && servicePlans.length > 0 && (
         <motion.section 
@@ -584,84 +662,6 @@ export default function Home() {
           </div>
         </motion.section>
       )}
-
-      {/* Products Section */}
-      <motion.section 
-        className="py-24 bg-muted/30"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-      >
-        <div className="container mx-auto px-4">
-          <motion.div 
-            className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <div>
-              <Badge className="mb-4 bg-accent/10 text-accent-foreground border-accent/20">Shop</Badge>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold">
-                Popular
-                <span className="text-gradient ml-2">Products</span>
-              </h2>
-            </div>
-            <Link href="/shop">
-              <Button variant="ghost" className="gap-2 group" data-testid="link-view-all-products">
-                View All Products
-                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-          </motion.div>
-          
-          {productsLoading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {Array(4).fill(0).map((_, i) => (
-                <Skeleton key={i} className="aspect-[4/5] rounded-xl" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {products?.slice(0, 4).map((product, index) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <Link href="/shop">
-                    <Card className="overflow-hidden group cursor-pointer border-0 shadow-lg hover:shadow-2xl transition-all duration-500" data-testid={`card-product-${product.id}`}>
-                      <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/10 flex items-center justify-center relative overflow-hidden img-hover-zoom">
-                        {product.image ? (
-                          <img 
-                            src={product.image} 
-                            alt={product.name}
-                            className="absolute inset-0 w-full h-full object-cover"
-                            data-testid={`img-product-${product.id}`}
-                          />
-                        ) : (
-                          <Printer className="h-20 w-20 text-primary/20" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      </div>
-                      <CardContent className="p-5">
-                        <Badge variant="secondary" className="mb-2 text-xs">{product.category}</Badge>
-                        <h3 className="font-display font-semibold text-lg mb-1 group-hover:text-primary transition-colors">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{product.description}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xl font-display font-bold text-primary">From R{product.basePrice}</span>
-                          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      </motion.section>
 
       {/* Testimonials Section */}
       {testimonials && testimonials.length > 0 && (
