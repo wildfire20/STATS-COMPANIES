@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["npm ci --include=dev"]
+cmds = ["npx --yes npm@10.8.3 ci --include=dev --no-audit --no-fund"]
 
 [phases.build]
 cmds = ["npm run build"]
