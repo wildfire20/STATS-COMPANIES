@@ -74,14 +74,14 @@ async function seedAdminUser() {
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {
-  await setupAuth(app);
-  
-  await seedAdminUser();
-
-  // Health check endpoint for Railway
+  // Health check endpoint for Railway - register first so it responds even if auth setup fails or hangs
   app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
+
+  await setupAuth(app);
+  
+  await seedAdminUser();
 
   app.post('/api/auth/local/login', async (req, res) => {
     try {
