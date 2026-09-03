@@ -53,7 +53,6 @@ const adminNavItems = [
   { href: "/admin/team", label: "Team", icon: Users },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/contact", label: "Contact", icon: Mail },
-  { href: "/admin/demo-accounts", label: "Demo Access", icon: Eye },
 ];
 
 interface AdminLayoutProps {

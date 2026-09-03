@@ -14,6 +14,9 @@ interface CartItem {
   options: Record<string, string | number> | null;
   unitPrice: string;
   totalPrice: string;
+  fulfillmentInstructions: string | null;
+  artworkUrl: string | null;
+  artworkName: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,6 +39,7 @@ interface CartContextType {
     unitPrice: string;
   }) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
+  updateFulfillment: (itemId: string, details: { fulfillmentInstructions: string; artworkUrl?: string | null; artworkName?: string | null }) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
   refetch: () => void;
@@ -157,6 +161,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     await updateQuantityMutation.mutateAsync({ itemId, quantity });
   }, [updateQuantityMutation]);
 
+  const updateFulfillment = useCallback(async (itemId: string, details: { fulfillmentInstructions: string; artworkUrl?: string | null; artworkName?: string | null }) => {
+    await apiRequest("PATCH", `/api/cart/${itemId}`, details);
+    queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
+  }, []);
+
   const removeItem = useCallback(async (itemId: string) => {
     await removeItemMutation.mutateAsync(itemId);
   }, [removeItemMutation]);
@@ -178,6 +187,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         toggleCart: () => setIsOpen((prev) => !prev),
         addItem,
         updateQuantity,
+        updateFulfillment,
         removeItem,
         clearCart,
         refetch,

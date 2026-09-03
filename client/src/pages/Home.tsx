@@ -395,7 +395,7 @@ export default function Home() {
                     </div>
                     <CardContent className="p-5">
                       <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{promo.description}</p>
-                      <Link href="/quote">
+                      <Link href={`/quote?sourceType=promotion&sourceId=${promo.id}&selected=${encodeURIComponent(promo.title)}`}>
                         <Button variant="ghost" className="p-0 h-auto text-secondary hover:text-secondary/80 font-semibold group/btn">
                           Claim Offer
                           <ArrowRight className="h-4 w-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
@@ -630,7 +630,7 @@ export default function Home() {
                       )}
                     </CardContent>
                     <CardFooter className="pt-4">
-                      <Link href="/quote" className="w-full">
+                      <Link href={`/quote?sourceType=marketing_plan&sourceId=${plan.id}&selected=${encodeURIComponent(plan.name)}`} className="w-full">
                         <Button 
                           className={`w-full rounded-full ${plan.isPopular ? 'btn-premium' : ''}`}
                           variant={plan.isPopular ? "default" : "outline"}

@@ -263,7 +263,7 @@ export default function Services() {
                       )}
                     </CardContent>
                     <CardFooter className="pt-4">
-                      <Link href="/quote" className="w-full">
+                      <Link href={`/quote?sourceType=marketing_plan&sourceId=${plan.id}&selected=${encodeURIComponent(plan.name)}`} className="w-full">
                         <Button 
                           className={`w-full rounded-full ${plan.isPopular ? 'btn-premium' : ''}`}
                           variant={plan.isPopular ? "default" : "outline"}

@@ -79,7 +79,7 @@ export default function Promotions() {
                         })}</span>
                       </div>
                     )}
-                    <Link href="/quote">
+                    <Link href={`/quote?sourceType=promotion&sourceId=${promo.id}&selected=${encodeURIComponent(promo.title)}`}>
                       <Button className="w-full" data-testid={`button-claim-${promo.id}`}>
                         Claim This Offer
                         <ArrowRight className="h-4 w-4 ml-2" />

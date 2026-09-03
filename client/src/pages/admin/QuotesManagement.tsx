@@ -84,6 +84,7 @@ export default function QuotesManagement() {
                   <TableRow>
                     <TableHead>Customer</TableHead>
                     <TableHead>Service Type</TableHead>
+                    <TableHead>Request Source</TableHead>
                     <TableHead>Budget</TableHead>
                     <TableHead>Timeline</TableHead>
                     <TableHead>Status</TableHead>
@@ -105,6 +106,14 @@ export default function QuotesManagement() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{quote.serviceType}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {quote.sourceType ? (
+                          <div className="space-y-1">
+                            <Badge variant="secondary">{quote.sourceType === "promotion" ? "Promotion claim" : "Marketing plan"}</Badge>
+                            <p className="text-xs text-muted-foreground">{quote.sourceName || "Selected item"}</p>
+                          </div>
+                        ) : <span className="text-muted-foreground">Standard quote</span>}
                       </TableCell>
                       <TableCell>
                         {quote.budget || "-"}
@@ -159,6 +168,12 @@ export default function QuotesManagement() {
                                     <p className="text-sm text-muted-foreground">{quote.company}</p>
                                   )}
                                 </div>
+                                {quote.sourceType && (
+                                  <div>
+                                    <h4 className="font-medium mb-1">Request Source</h4>
+                                    <p className="text-sm">{quote.sourceType === "promotion" ? "Promotion claim" : "Marketing plan request"}: {quote.sourceName || "Selected item"}</p>
+                                  </div>
+                                )}
                                 <div>
                                   <h4 className="font-medium mb-1">Service Type</h4>
                                   <Badge variant="outline">{quote.serviceType}</Badge>

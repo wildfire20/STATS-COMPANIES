@@ -282,6 +282,21 @@ function OrderDetails({ orderId }: { orderId: string }) {
                           {Object.entries(item.options).map(([key, value]) => `${key}: ${value}`).join(', ')}
                         </p>
                       )}
+                      {item.fulfillmentInstructions && (
+                        <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">
+                          Fulfillment: {item.fulfillmentInstructions}
+                        </p>
+                      )}
+                      {item.artworkUrl && (
+                        <a
+                          href={item.artworkUrl}
+                          className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          data-testid={`link-order-artwork-${index}`}
+                        >
+                          <Download className="h-3 w-3" />
+                          Download artwork{item.artworkName ? `: ${item.artworkName}` : ""}
+                        </a>
+                      )}
                     </div>
                     <p className="font-semibold">R{item.price.toLocaleString()}</p>
                   </div>

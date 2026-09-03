@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -37,17 +38,19 @@ interface PaymentMethod {
   gatewayEnabled: boolean | null;
 }
 
-type CheckoutStep = "address" | "payment" | "review";
+type CheckoutStep = "details" | "address" | "payment" | "review";
 
 export default function Checkout() {
   const [, setLocation] = useLocation();
-  const { items, itemCount, subtotal, refetch } = useCart();
+  const { items, itemCount, subtotal, refetch, updateFulfillment } = useCart();
   const { toast } = useToast();
   
-  const [step, setStep] = useState<CheckoutStep>("address");
+  const [step, setStep] = useState<CheckoutStep>("details");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("bank_transfer");
   const [notes, setNotes] = useState("");
+  const [lineDetails, setLineDetails] = useState<Record<string, { instructions: string; file?: File; artworkUrl?: string | null; artworkName?: string | null }>>({});
+  const [savingDetails, setSavingDetails] = useState(false);
 
   const { isLoaded: userLoaded, isSignedIn } = useAuth();
 
@@ -72,6 +75,43 @@ export default function Checkout() {
       setPaymentMethod(paymentMethods[0].methodType);
     }
   }, [paymentMethods, paymentMethod]);
+
+  useEffect(() => {
+    setLineDetails((current) => Object.fromEntries(items.map((item) => [item.id, current[item.id] || {
+      instructions: item.fulfillmentInstructions || "",
+      artworkUrl: item.artworkUrl,
+      artworkName: item.artworkName,
+    }])));
+  }, [items]);
+
+  const saveFulfillmentDetails = async () => {
+    if (items.some((item) => !(lineDetails[item.id]?.instructions || "").trim())) {
+      toast({ title: "Fulfillment details required", description: "Add instructions for every cart line before continuing.", variant: "destructive" });
+      return;
+    }
+    try {
+      setSavingDetails(true);
+      for (const item of items) {
+        const detail = lineDetails[item.id];
+        let artworkUrl = detail.artworkUrl;
+        let artworkName = detail.artworkName;
+        if (detail.file) {
+          const formData = new FormData();
+          formData.append("artwork", detail.file);
+          const uploaded = await (await apiRequest("POST", "/api/artwork", formData)).json();
+          artworkUrl = uploaded.url;
+          artworkName = uploaded.name;
+        }
+        await updateFulfillment(item.id, { fulfillmentInstructions: detail.instructions.trim(), artworkUrl, artworkName });
+      }
+      await refetch();
+      setStep("address");
+    } catch (error) {
+      toast({ title: "Could not save fulfillment details", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    } finally {
+      setSavingDetails(false);
+    }
+  };
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
@@ -188,6 +228,7 @@ export default function Checkout() {
   const selectedAddress = addresses?.find(a => a.id === selectedAddressId);
 
   const steps = [
+    { id: "details", label: "Artwork & Details", icon: Package },
     { id: "address", label: "Delivery", icon: MapPin },
     { id: "payment", label: "Payment", icon: CreditCard },
     { id: "review", label: "Review", icon: CheckCircle },
@@ -215,7 +256,7 @@ export default function Checkout() {
               <div key={s.id} className="flex items-center">
                 <button
                   onClick={() => {
-                    if (s.id === "address" || (s.id === "payment" && step !== "address") || s.id === step) {
+                    if (s.id === "details" || s.id === step) {
                       setStep(s.id as CheckoutStep);
                     }
                   }}
@@ -323,6 +364,33 @@ export default function Checkout() {
                   </CardContent>
                 </Card>
               </motion.div>
+            )}
+
+            {step === "details" && (
+              <Card data-testid="card-fulfillment-step">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Package className="h-5 w-5" />Fulfillment Details</CardTitle>
+                  <CardDescription>Tell us how to fulfill each cart line. One set of instructions applies to that line’s quantity.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {items.map((item) => {
+                    const detail = lineDetails[item.id] || { instructions: "" };
+                    return <div key={item.id} className="rounded-lg border p-4 space-y-3">
+                      <div className="flex justify-between gap-3"><div><p className="font-medium">{item.productName}</p><p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p></div></div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`instructions-${item.id}`}>Instructions *</Label>
+                        <Textarea id={`instructions-${item.id}`} value={detail.instructions} onChange={(e) => setLineDetails((current) => ({ ...current, [item.id]: { ...detail, instructions: e.target.value } }))} placeholder="Describe sizes, print placement, colours, wording, or other requirements." rows={3} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`artwork-${item.id}`}>Artwork or logo (optional)</Label>
+                        <Input id={`artwork-${item.id}`} type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.svg,.eps,.ai,.zip,.rar,.7z" onChange={(e) => setLineDetails((current) => ({ ...current, [item.id]: { ...detail, file: e.target.files?.[0] } }))} />
+                        {(detail.file?.name || detail.artworkName) && <p className="text-xs text-muted-foreground">Selected: {detail.file?.name || detail.artworkName}</p>}
+                      </div>
+                    </div>;
+                  })}
+                  <div className="flex justify-end"><Button onClick={saveFulfillmentDetails} disabled={savingDetails} className="rounded-full px-8">{savingDetails && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Continue to Delivery<ArrowRight className="h-4 w-4 ml-2" /></Button></div>
+                </CardContent>
+              </Card>
             )}
 
             {step === "payment" && (
@@ -528,6 +596,10 @@ export default function Checkout() {
                               <p className="text-sm text-muted-foreground">
                                 {item.quantity} x {formatPrice(item.unitPrice)}
                               </p>
+                               {item.fulfillmentInstructions && (
+                                 <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">Fulfillment: {item.fulfillmentInstructions}</p>
+                               )}
+                               {item.artworkName && <p className="text-xs text-muted-foreground mt-1">Artwork: {item.artworkName}</p>}
                             </div>
                             <p className="font-medium">{formatPrice(item.totalPrice)}</p>
                           </div>

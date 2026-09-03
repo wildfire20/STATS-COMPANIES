@@ -255,6 +255,8 @@ export interface OrderItem {
   options: Record<string, string | number>;
   price: number;
   artworkUrl?: string;
+  artworkName?: string;
+  fulfillmentInstructions?: string;
 }
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
@@ -275,6 +277,9 @@ export const quoteRequests = pgTable("quote_requests", {
   projectDescription: text("project_description").notNull(),
   budget: text("budget"),
   timeline: text("timeline"),
+  sourceType: varchar("source_type"),
+  sourceId: varchar("source_id"),
+  sourceName: text("source_name"),
   status: text("status").notNull().default("new"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -358,6 +363,9 @@ export const cartItems = pgTable("cart_items", {
   options: jsonb("options").$type<Record<string, string | number>>(),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
   totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  fulfillmentInstructions: text("fulfillment_instructions"),
+  artworkUrl: text("artwork_url"),
+  artworkName: varchar("artwork_name"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

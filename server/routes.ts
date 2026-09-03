@@ -55,6 +55,24 @@ const videoUpload = multer({
   }
 });
 
+const artworkMimeTypes: Record<string, string> = {
+  "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
+  "application/pdf": "pdf", "image/svg+xml": "svg", "application/postscript": "eps",
+  "application/zip": "zip", "application/x-zip-compressed": "zip",
+  "application/x-rar-compressed": "rar", "application/x-7z-compressed": "7z",
+  "application/octet-stream": "bin",
+};
+const artworkUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const extension = file.originalname.split(".").pop()?.toLowerCase();
+    const allowedExtensions = new Set(["jpg", "jpeg", "png", "webp", "gif", "pdf", "svg", "eps", "ai", "zip", "rar", "7z"]);
+    if (artworkMimeTypes[file.mimetype] && extension && allowedExtensions.has(extension)) cb(null, true);
+    else cb(new Error("Unsupported artwork format"));
+  },
+});
+
 const ANONYMOUS_CART_COOKIE = "anonymous_cart_id";
 const ANONYMOUS_CART_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -112,6 +130,25 @@ async function getCartScope(req: Request, res: Response): Promise<{ userId?: str
     return { userId: dbUser.id };
   }
   return { sessionId: getOrCreateAnonymousCartId(req, res) };
+}
+
+function calculateProductUnitPrice(product: { basePrice: string; options: any }, selected: Record<string, string | number>): number | null {
+  let price = Number(product.basePrice);
+  if (!Number.isFinite(price)) return null;
+  for (const option of product.options || []) {
+    const value = selected[option.name];
+    if (value === undefined) continue;
+    if (option.type === "select") {
+      const choice = option.values?.find((item: any) => item.label === value);
+      if (!choice) return null;
+      price += Number(choice.price) || 0;
+    } else if (option.type === "number") {
+      const numberValue = Number(value);
+      if (!Number.isFinite(numberValue) || (option.min !== undefined && numberValue < option.min) || (option.max !== undefined && numberValue > option.max)) return null;
+      price += numberValue * (Number(option.pricePerUnit) || 0);
+    }
+  }
+  return price;
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {
@@ -194,6 +231,48 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error('Image fetch error:', error);
       res.status(500).json({ error: 'Failed to fetch image' });
+    }
+  });
+
+  // Customer artwork remains private and can only be downloaded by its owner or an administrator.
+  app.post("/api/artwork", isAuthenticated, artworkUpload.single("artwork"), async (req: any, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ error: "An artwork file is required" });
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
+      const extension = req.file.originalname.split(".").pop()!.toLowerCase();
+      const fileId = `${randomUUID()}.${extension}`;
+      const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._ -]/g, "_").slice(0, 120);
+      const file = objectStorageClient.bucket(bucketId).file(`private/artwork/${fileId}`);
+      await file.save(req.file.buffer, {
+        resumable: false,
+        contentType: req.file.mimetype,
+        metadata: { contentType: req.file.mimetype, metadata: { "custom:owner": req.dbUser!.id, "custom:originalName": safeName } },
+      });
+      res.status(201).json({ url: `/api/artwork/${fileId}`, name: safeName });
+    } catch (error) {
+      console.error("Artwork upload error:", error);
+      res.status(400).json({ error: error instanceof Error ? error.message : "Failed to upload artwork" });
+    }
+  });
+
+  app.get("/api/artwork/:fileId", isAuthenticated, async (req: any, res) => {
+    try {
+      if (!/^[0-9a-f-]{36}\.[a-z0-9]+$/i.test(req.params.fileId)) return res.status(404).json({ error: "Artwork not found" });
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
+      const file = objectStorageClient.bucket(bucketId).file(`private/artwork/${req.params.fileId}`);
+      const [exists] = await file.exists();
+      if (!exists) return res.status(404).json({ error: "Artwork not found" });
+      const [metadata] = await file.getMetadata();
+      const owner = metadata.metadata?.["custom:owner"];
+      if (req.dbUser!.role !== "admin" && owner !== req.dbUser!.id) return res.status(403).json({ error: "Not authorized to download this artwork" });
+      const safeName = String(metadata.metadata?.["custom:originalName"] || req.params.fileId).replace(/["\r\n]/g, "_");
+      res.set({ "Content-Type": metadata.contentType || "application/octet-stream", "Content-Disposition": `attachment; filename="${safeName}"`, "Cache-Control": "private, no-store" });
+      file.createReadStream().pipe(res);
+    } catch (error) {
+      console.error("Artwork download error:", error);
+      res.status(500).json({ error: "Failed to download artwork" });
     }
   });
 
@@ -486,7 +565,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/quotes", async (req, res) => {
     try {
       const data = insertQuoteRequestSchema.parse(req.body);
-      const quote = await storage.createQuoteRequest(data);
+      const source = z.object({
+        sourceType: z.enum(["promotion", "marketing_plan"]).optional(),
+        sourceId: z.string().uuid().optional(),
+      }).parse(req.body);
+      if (Boolean(source.sourceType) !== Boolean(source.sourceId)) {
+        return res.status(400).json({ error: "A complete selected offer or plan is required" });
+      }
+      let sourceName: string | undefined;
+      if (source.sourceType === "promotion" && source.sourceId) {
+        const promotion = await storage.getPromotion(source.sourceId);
+        if (!promotion || !promotion.isActive) return res.status(400).json({ error: "The selected promotion is no longer available" });
+        sourceName = promotion.title;
+      }
+      if (source.sourceType === "marketing_plan" && source.sourceId) {
+        const plan = await storage.getServicePlan(source.sourceId);
+        if (!plan || !plan.isActive) return res.status(400).json({ error: "The selected marketing plan is no longer available" });
+        sourceName = plan.name;
+      }
+      const quote = await storage.createQuoteRequest({ ...data, sourceType: source.sourceType, sourceId: source.sourceId, sourceName });
       res.status(201).json(quote);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1688,9 +1785,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const { userId, sessionId } = await getCartScope(req, res);
       
-      const { quantity } = req.body;
+      const { quantity, fulfillmentInstructions, artworkUrl, artworkName } = req.body;
       
-      if (!quantity || quantity < 1) {
+      if (quantity !== undefined && (!Number.isInteger(quantity) || quantity < 1)) {
         return res.status(400).json({ error: "Valid quantity is required" });
       }
 
@@ -1703,11 +1800,31 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(403).json({ error: "Unauthorized" });
       }
 
-      const totalPrice = (parseFloat(cartItem.unitPrice) * parseInt(quantity)).toFixed(2);
+      if (fulfillmentInstructions !== undefined && (typeof fulfillmentInstructions !== "string" || fulfillmentInstructions.trim().length < 3 || fulfillmentInstructions.length > 4000)) {
+        return res.status(400).json({ error: "Fulfillment instructions must be between 3 and 4000 characters" });
+      }
+      if (artworkUrl !== undefined && artworkUrl !== null && !/^\/api\/artwork\/[0-9a-f-]{36}\.[a-z0-9]+$/i.test(artworkUrl)) {
+        return res.status(400).json({ error: "Invalid artwork file" });
+      }
+      if (artworkUrl) {
+        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+        const fileId = artworkUrl.split("/").pop()!;
+        if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
+        const [metadata] = await objectStorageClient.bucket(bucketId).file(`private/artwork/${fileId}`).getMetadata();
+        if (metadata.metadata?.["custom:owner"] !== userId) return res.status(403).json({ error: "You can only attach your own artwork" });
+      }
+      if (artworkName !== undefined && artworkName !== null && (typeof artworkName !== "string" || artworkName.length > 120)) {
+        return res.status(400).json({ error: "Invalid artwork filename" });
+      }
+      const newQuantity = quantity === undefined ? cartItem.quantity : quantity;
+      const totalPrice = (parseFloat(cartItem.unitPrice) * newQuantity).toFixed(2);
       
       const updatedItem = await storage.updateCartItem(req.params.id, {
-        quantity: parseInt(quantity),
+        quantity: newQuantity,
         totalPrice,
+        ...(fulfillmentInstructions !== undefined ? { fulfillmentInstructions: fulfillmentInstructions.trim() } : {}),
+        ...(artworkUrl !== undefined ? { artworkUrl: artworkUrl || null } : {}),
+        ...(artworkName !== undefined ? { artworkName: artworkName || null } : {}),
       });
 
       const items = await storage.getCartItems(userId || undefined, !userId ? sessionId : undefined);
@@ -1772,20 +1889,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: "Cart is empty" });
       }
 
-      const { subtotal } = await storage.getCartTotal(userId);
+      if (cartItems.some(item => !item.fulfillmentInstructions?.trim())) {
+        return res.status(400).json({ error: "Fulfillment instructions are required for every cart item" });
+      }
+      const pricedItems = await Promise.all(cartItems.map(async item => {
+        const product = await storage.getProduct(item.productId);
+        if (!product || !product.isActive) throw new Error(`Product ${item.productName} is unavailable`);
+        const unitPrice = calculateProductUnitPrice(product, item.options || {});
+        if (unitPrice === null) throw new Error(`Saved options for ${item.productName} are invalid`);
+        return { item, unitPrice };
+      }));
+      const subtotal = pricedItems.reduce((sum, { item, unitPrice }) => sum + unitPrice * item.quantity, 0);
       const tax = subtotal * 0.15;
       const total = subtotal + tax;
 
       const user = await storage.getUser(userId);
       const address = addressId ? await storage.getAddress(addressId) : null;
+      if (addressId && (!address || address.userId !== userId)) {
+        return res.status(400).json({ error: "Please select one of your saved delivery addresses" });
+      }
 
-      const orderItems = cartItems.map(item => ({
+      const orderItems = pricedItems.map(({ item, unitPrice }) => ({
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity,
-        price: parseFloat(item.unitPrice),
+        price: unitPrice,
         options: item.options || {},
-        artworkUrl: item.productImage || undefined,
+        artworkUrl: item.artworkUrl || undefined,
+        artworkName: item.artworkName || undefined,
+        fulfillmentInstructions: item.fulfillmentInstructions!.trim(),
       }));
 
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
@@ -1848,6 +1980,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     } catch (error) {
       console.error("Checkout error:", error);
+      if (error instanceof Error && (error.message.includes("unavailable") || error.message.includes("invalid"))) {
+        return res.status(400).json({ error: error.message });
+      }
       res.status(500).json({ error: "Checkout failed" });
     }
   });

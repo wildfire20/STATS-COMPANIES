@@ -446,13 +446,17 @@ export default function OrdersManagement() {
                           <div className="pt-2 border-t border-border/50 mt-2">
                             <a 
                               href={item.artworkUrl} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
                               className="text-xs text-primary hover:underline"
                               data-testid={`link-artwork-${index}`}
                             >
-                              View Artwork File
+                              Download Artwork File{item.artworkName ? `: ${item.artworkName}` : ""}
                             </a>
+                          </div>
+                        )}
+                        {item.fulfillmentInstructions && (
+                          <div className="pt-2 border-t border-border/50 mt-2">
+                            <span className="text-xs text-muted-foreground block mb-1">Fulfillment instructions:</span>
+                            <p className="text-sm whitespace-pre-wrap">{item.fulfillmentInstructions}</p>
                           </div>
                         )}
                       </div>

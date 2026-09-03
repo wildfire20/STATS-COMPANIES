@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { FileText, CheckCircle, Printer, Camera, Video, Megaphone } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import type { Promotion, ServicePlan } from "@shared/schema";
 
 const quoteFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -58,6 +59,24 @@ const timelines = [
 export default function Quote() {
   const { toast } = useToast();
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
+  const selection = new URLSearchParams(window.location.search);
+  const sourceType = selection.get("sourceType");
+  const sourceId = selection.get("sourceId");
+  const hasSourceParams = sourceType !== null || sourceId !== null;
+  const validSourceParams = !!sourceId && /^[0-9a-f-]{36}$/i.test(sourceId) && ["promotion", "marketing_plan"].includes(sourceType || "");
+  const { data: promotions, isLoading: promotionLoading, isError: promotionError } = useQuery<Promotion[]>({
+    queryKey: ["/api/promotions"],
+    enabled: validSourceParams && sourceType === "promotion",
+  });
+  const { data: plans, isLoading: planLoading, isError: planError } = useQuery<ServicePlan[]>({
+    queryKey: ["/api/service-plans"],
+    enabled: validSourceParams && sourceType === "marketing_plan",
+  });
+  const sourceLoading = (sourceType === "promotion" && promotionLoading) || (sourceType === "marketing_plan" && planLoading);
+  const selectedSourceName = sourceType === "promotion"
+    ? promotions?.find((item) => item.id === sourceId)?.title
+    : plans?.find((item) => item.id === sourceId)?.name;
+  const invalidSource = hasSourceParams && (!validSourceParams || promotionError || planError || (!sourceLoading && !selectedSourceName));
 
   const form = useForm<QuoteFormData>({
     resolver: zodResolver(quoteFormSchema),
@@ -75,7 +94,10 @@ export default function Quote() {
 
   const quoteMutation = useMutation({
     mutationFn: async (data: QuoteFormData) => {
-      const response = await apiRequest("POST", "/api/quotes", data);
+      const response = await apiRequest("POST", "/api/quotes", {
+        ...data,
+        ...(sourceType && sourceId ? { sourceType, sourceId } : {}),
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -95,6 +117,7 @@ export default function Quote() {
   });
 
   const onSubmit = (data: QuoteFormData) => {
+    if (invalidSource || sourceLoading) return;
     quoteMutation.mutate(data);
   };
 
@@ -108,7 +131,7 @@ export default function Quote() {
             </div>
             <h2 className="text-2xl font-bold mb-2">Quote Request Received!</h2>
             <p className="text-muted-foreground mb-4">
-              Thank you for your interest. Our team will review your requirements and get back to you within 24 hours.
+              Thank you for your interest{selectedSourceName ? ` in ${selectedSourceName}` : ""}. Our team will review your requirements and get back to you within 24 hours.
             </p>
             <Button onClick={() => setQuoteSubmitted(false)} data-testid="button-new-quote">
               Submit Another Quote
@@ -151,6 +174,21 @@ export default function Quote() {
               <CardContent>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {sourceLoading && (
+                      <div className="rounded-lg border bg-muted p-3 text-sm text-muted-foreground">
+                        Confirming your selected {sourceType === "promotion" ? "promotion" : "marketing plan"}...
+                      </div>
+                    )}
+                    {invalidSource && (
+                      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                        This selected offer or plan is unavailable. Please return to our promotions or services page and choose an active option.
+                      </div>
+                    )}
+                    {selectedSourceName && !sourceLoading && (
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+                        <span className="font-medium">{sourceType === "promotion" ? "Promotion claim" : "Marketing plan request"}:</span> {selectedSourceName}
+                      </div>
+                    )}
                     <div className="grid sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -310,7 +348,7 @@ export default function Quote() {
                       type="submit" 
                       className="w-full" 
                       size="lg"
-                      disabled={quoteMutation.isPending}
+                       disabled={quoteMutation.isPending || sourceLoading || invalidSource}
                       data-testid="button-submit-quote"
                     >
                       {quoteMutation.isPending ? "Submitting..." : "Submit Quote Request"}
