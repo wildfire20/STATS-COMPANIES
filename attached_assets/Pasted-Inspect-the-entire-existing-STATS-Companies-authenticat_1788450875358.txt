@@ -1,0 +1,35 @@
+Inspect the entire existing STATS Companies authentication and authorization architecture before changing any code.
+
+The application currently supports manually created email/password accounts, existing Replit authentication infrastructure, customer accounts, and an administrator account that can access the existing /admin dashboard.
+
+I now want to migrate authentication to Clerk. Clerk will support Email and Google authentication only for now. Phone authentication, usernames and Clerk Organizations are disabled.
+
+IMPORTANT: Do not implement Clerk yet.
+
+First analyse and report:
+
+how users are currently stored in the database;
+how passwords/sessions are currently handled;
+how the existing admin user is identified;
+how the admin role is stored and checked;
+which routes require authentication;
+which routes require administrator access;
+how customer dashboard data is associated with existing users;
+whether guest checkout, bookings, quotes and rental requests currently work without authentication;
+every place in the code that depends on the current user ID;
+every database table that references the current users table;
+what would break if Replit Auth/current authentication were removed immediately.
+
+Then propose a migration plan where Clerk handles authentication while the existing PostgreSQL database continues to handle application roles, customer relationships and business data.
+
+The intended architecture is:
+
+Clerk User → linked to existing database User through a clerkUserId or equivalent field → existing database role determines customer/admin access.
+
+The existing administrator must retain access to the current admin dashboard after migration.
+
+Existing orders, bookings, quotes, rentals, invoices, addresses and other customer records must remain associated with the correct user.
+
+Guest functionality must remain available wherever the existing application already allows it.
+
+Do not delete the current authentication system, modify database records or install Clerk until you have given me the full audit and migration plan for approval.
