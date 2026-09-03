@@ -1,0 +1,764 @@
+Implement the approved Clerk authentication migration for the existing STATS Companies React + Express + PostgreSQL application.
+
+IMPORTANT:
+
+An authentication audit has already been completed.
+
+The current application contains:
+
+- Local email/password authentication
+- Replit OpenID Connect authentication
+- Phone OTP infrastructure
+- Express/PostgreSQL sessions
+- A PostgreSQL users table
+- Existing customer accounts
+- An existing STATS administrator account
+- Guest shopping carts
+- Guest bookings
+- Guest quotes
+- Guest equipment rentals
+- A separate demo-access session
+
+The existing PostgreSQL users.id is the permanent ownership key for business data including:
+
+- orders
+- bookings
+- invoices
+- notifications
+- addresses
+- cart items
+- equipment rentals
+
+DO NOT change existing users.id values.
+
+DO NOT delete existing customer records.
+
+DO NOT recreate existing products, services, orders, bookings, quotes or admin data.
+
+DO NOT remove the legacy authentication system yet.
+
+DO NOT deploy to production yet.
+
+This implementation is for the Clerk DEVELOPMENT instance only.
+
+==================================================
+1. CLERK CONFIGURATION
+==================================================
+
+Clerk has already been created for STATS Companies.
+
+Authentication methods enabled in Clerk:
+
+- Email: ENABLED
+- Google: ENABLED
+
+Disabled:
+
+- Phone authentication
+- Username
+- Organizations / multi-tenancy
+- Apple
+- Microsoft
+- Other providers
+
+The following environment variables have been added securely through Replit Secrets:
+
+VITE_CLERK_PUBLISHABLE_KEY
+CLERK_SECRET_KEY
+
+Do not hard-code either key.
+
+Do not log the Clerk secret key.
+
+Do not expose CLERK_SECRET_KEY to the browser.
+
+Use the existing environment variables.
+
+==================================================
+2. INSTALL THE APPROPRIATE CLERK SDKs
+==================================================
+
+This application uses:
+
+Frontend:
+React / Vite
+
+Backend:
+Express
+
+Use the current supported Clerk packages:
+
+Frontend:
+@clerk/react
+
+Backend:
+@clerk/express
+
+Follow current Clerk recommended integration patterns.
+
+Do not introduce Next.js-specific Clerk packages.
+
+==================================================
+3. ADD CLERK TO THE REACT FRONTEND
+==================================================
+
+Wrap the existing React application with ClerkProvider using:
+
+VITE_CLERK_PUBLISHABLE_KEY
+
+Preserve:
+
+- existing React routing
+- existing layouts
+- existing styling
+- existing customer dashboard
+- existing admin dashboard
+- existing cart
+- existing application state
+- existing React Query behavior where possible
+
+Do not redesign the website.
+
+Do not replace the complete frontend architecture.
+
+==================================================
+4. ADD CLERK TO EXPRESS
+==================================================
+
+Configure Clerk middleware on the Express server using the current Clerk Express SDK.
+
+Use Clerk authentication to securely determine the verified Clerk user ID from the request.
+
+The backend must never trust:
+
+- a Clerk user ID supplied in request body
+- a PostgreSQL user ID supplied by frontend
+- a role supplied by frontend
+
+Identity and authorization must continue being derived server-side.
+
+==================================================
+5. CREATE A SAFE IDENTITY-MAPPING TABLE
+==================================================
+
+Do NOT replace users.id with Clerk IDs.
+
+Create a dedicated mapping table similar to:
+
+user_identities
+
+Fields should include the appropriate equivalents of:
+
+- id
+- userId
+- provider
+- providerUserId
+- environment / issuer
+- createdAt
+- updatedAt
+
+Requirements:
+
+userId
+→ references the EXISTING PostgreSQL users.id
+
+provider
+→ clerk
+
+providerUserId
+→ Clerk user ID
+
+environment
+→ distinguish development from production
+
+Use uniqueness constraints that prevent accidental duplicate Clerk identity mappings.
+
+Do not modify existing business ownership IDs.
+
+Do not rewrite existing:
+
+- order user IDs
+- booking user IDs
+- invoice user IDs
+- address user IDs
+- notification user IDs
+- cart user IDs
+- rental user IDs
+
+==================================================
+6. CREATE A CLERK → POSTGRESQL USER RESOLVER
+==================================================
+
+Implement central server-side middleware/helper.
+
+Target architecture:
+
+Verified Clerk session
+        ↓
+Clerk user ID
+        ↓
+user_identities mapping
+        ↓
+existing PostgreSQL users.id
+        ↓
+existing PostgreSQL user record
+        ↓
+role / customer relationships
+
+Attach the resolved database user to the server request using a safe internal mechanism such as:
+
+req.appUser
+
+or the most appropriate equivalent.
+
+The rest of the application should use the PostgreSQL user ID for business data.
+
+==================================================
+7. EXISTING EMAIL USER LINKING
+==================================================
+
+If a Clerk-authenticated user has no existing Clerk identity mapping:
+
+1. Retrieve their VERIFIED email from Clerk server-side.
+2. Search PostgreSQL for an existing user with that email.
+3. If exactly one safe matching existing user exists:
+   - link the Clerk identity to that existing PostgreSQL user.
+4. If there is no existing user:
+   - create a normal PostgreSQL customer record.
+   - then create the identity mapping.
+5. If multiple/conflicting records exist:
+   - DO NOT guess.
+   - return a controlled migration error requiring administrator review.
+
+Never grant access using an unverified client-supplied email address.
+
+==================================================
+8. PRESERVE THE EXISTING STATS ADMIN
+==================================================
+
+This is CRITICAL.
+
+The STATS administrator already exists in PostgreSQL with:
+
+role = admin
+
+Do not create a separate replacement admin database account.
+
+The existing administrator's users.id must remain unchanged.
+
+Create a controlled development migration mechanism so that:
+
+1. The STATS administrator signs into Clerk using their verified existing admin email.
+2. The Clerk user ID is deliberately linked to the EXISTING PostgreSQL admin user.
+3. PostgreSQL users.role remains "admin".
+4. Existing admin middleware continues using the PostgreSQL role.
+5. The administrator can access the existing /admin dashboard.
+6. All current admin features remain accessible.
+
+Never automatically grant admin role merely because someone types an email matching the admin email.
+
+The Clerk identity must be authenticated and verified, and the linking operation must target the existing known admin database record.
+
+==================================================
+9. KEEP POSTGRESQL AS THE ROLE SOURCE OF TRUTH
+==================================================
+
+Clerk determines:
+
+WHO IS THIS USER?
+
+PostgreSQL determines:
+
+WHAT MAY THIS USER DO?
+
+Continue using:
+
+users.role
+
+with:
+
+customer
+admin
+
+Do not migrate application roles into Clerk metadata at this stage.
+
+Do not enable Clerk Organizations.
+
+All existing backend admin route protection must remain based on the mapped PostgreSQL user role.
+
+==================================================
+10. PRESERVE /api/auth/user
+==================================================
+
+Keep the existing:
+
+GET /api/auth/user
+
+endpoint during migration.
+
+Refactor it so that it can:
+
+1. detect a valid Clerk session,
+2. resolve the mapped PostgreSQL user,
+3. return the same user structure expected by the existing frontend.
+
+This is important because the existing:
+
+- Header
+- Customer dashboard
+- Admin dashboard
+- Checkout
+- Navigation
+- useAuth hook
+- Role-aware links
+
+already depend on this endpoint.
+
+Avoid unnecessary frontend rewrites.
+
+==================================================
+11. KEEP THE OLD AUTHENTICATION TEMPORARILY
+==================================================
+
+DO NOT remove yet:
+
+- local email/password login
+- Replit authentication
+- existing Express sessions
+- old password hashes
+- old authentication routes
+
+We are doing a controlled transition.
+
+During development:
+
+CLERK AUTH
++
+LEGACY AUTH FALLBACK
+
+must temporarily coexist until Clerk has been tested.
+
+Add clear comments / separation so we can identify which legacy code can later be removed.
+
+Do not create ambiguous authentication where both systems disagree about identity.
+
+Clerk should be preferred when a valid Clerk session exists.
+
+==================================================
+12. PRESERVE GUEST FUNCTIONALITY
+==================================================
+
+Clerk must NOT force everyone to create an account.
+
+The following should remain usable without authentication where they currently are:
+
+- Product browsing
+- Service browsing
+- Equipment browsing
+- Guest cart
+- Booking submission
+- Quote submission
+- Equipment rental request
+- Other deliberately public browsing
+
+Keep anonymous Express-session functionality required for guest carts.
+
+Do NOT delete express-session merely because Clerk is being introduced.
+
+Demo sessions may also remain separately for now.
+
+==================================================
+13. CUSTOMER DASHBOARD
+==================================================
+
+After Clerk login, a customer must still access their existing:
+
+- Dashboard statistics
+- Profile
+- Addresses
+- Orders
+- Bookings
+- Invoices
+- Notifications
+- Rental history
+- Saved information
+
+The backend must resolve:
+
+Clerk identity
+→ PostgreSQL users.id
+→ existing customer data.
+
+Do not use Clerk user IDs as business-record user IDs.
+
+==================================================
+14. CART BEHAVIOR
+==================================================
+
+Preserve:
+
+Guest:
+sessionId cart
+
+Authenticated:
+PostgreSQL userId cart
+
+When a user signs into Clerk, ensure the application handles guest-to-authenticated cart transition safely.
+
+Do not silently lose guest cart items.
+
+Do not create duplicate carts unnecessarily.
+
+Report how the transition is implemented.
+
+==================================================
+15. LOGIN UI
+==================================================
+
+Replace or introduce the customer-facing Clerk login experience only after backend identity mapping works.
+
+The intended public login options are:
+
+- Email
+- Continue with Google
+
+Do NOT display:
+
+- Phone
+- Apple
+- Microsoft
+- Username
+- Organizations
+
+Preserve AutoM8/STATS visual branding around authentication where technically supported.
+
+The authentication interface should feel like part of the STATS website.
+
+==================================================
+16. REDIRECT BEHAVIOR
+==================================================
+
+After authentication:
+
+If PostgreSQL role = admin:
+→ /admin
+
+If PostgreSQL role = customer:
+→ /dashboard
+
+If the user originally attempted to access a protected customer route:
+→ return them to that appropriate route where safe.
+
+Preserve logout.
+
+Replace the visible Clerk/legacy logout behavior only after the Clerk flow is confirmed working.
+
+==================================================
+17. ADMIN DASHBOARD MUST NOT CHANGE
+==================================================
+
+Do not redesign or rebuild the existing admin dashboard.
+
+Preserve all existing admin functionality, including:
+
+- Dashboard
+- Services
+- Marketing Plans
+- Products
+- Equipment
+- Promotions
+- Orders
+- Bookings
+- Quotes
+- Portfolio
+- Testimonials
+- Team
+- Payments
+- Contact
+- Demo Access
+
+Existing database-driven content already entered by STATS Companies must remain unchanged.
+
+==================================================
+18. DATABASE BACKUP BEFORE MIGRATION
+==================================================
+
+Before applying schema migrations:
+
+Create or verify a full backup/snapshot of the development PostgreSQL database.
+
+Record baseline counts for:
+
+- users
+- products
+- services
+- service plans
+- orders
+- bookings
+- quotes
+- addresses
+- invoices
+- notifications
+- equipment
+- equipment rentals
+- portfolio
+- testimonials
+- team
+
+After migration, compare the counts.
+
+The Clerk migration must not reduce any existing business-data count.
+
+==================================================
+19. SECURITY FIXES TO PERFORM DURING THIS MIGRATION
+==================================================
+
+While modifying authentication, fix the following audit findings where safe:
+
+A.
+Protect public reads of bookings.
+
+B.
+Protect public reads of orders.
+
+C.
+Protect individual order-detail access.
+
+D.
+Protect individual equipment-rental detail access.
+
+E.
+Do not accept a client-provided userId as proof of identity for public order creation.
+
+F.
+For authenticated operations, resolve user ID server-side.
+
+G.
+Verify notification ownership before allowing a notification to be marked read.
+
+H.
+Verify address ownership during checkout.
+
+I.
+Calculate authoritative product prices from the database when creating an order rather than trusting submitted browser prices.
+
+J.
+Stop logging OTP values.
+
+K.
+Do not expose customer API response bodies unnecessarily in production logs.
+
+DO NOT remove the existing administrator fallback yet until Clerk admin access has been successfully tested.
+
+==================================================
+20. DO NOT REMOVE SEEDED ADMIN YET
+==================================================
+
+The audit identified seeded administrator credentials as something that must eventually be removed.
+
+However:
+
+DO NOT remove them during the first implementation step.
+
+First:
+
+- successfully authenticate admin through Clerk,
+- link the correct Clerk identity,
+- verify PostgreSQL role,
+- test all admin routes.
+
+Only after I approve the migration will we remove the seeded administrator mechanism.
+
+==================================================
+21. DEVELOPMENT CLERK ONLY
+==================================================
+
+This implementation uses Clerk DEVELOPMENT keys.
+
+Keys currently use:
+
+pk_test_
+sk_test_
+
+Do NOT configure production Clerk yet.
+
+Do NOT replace these with pk_live / sk_live.
+
+Do NOT configure production Google OAuth credentials yet.
+
+Do NOT change STATS Companies DNS.
+
+Do NOT configure Railway yet.
+
+Production Clerk will be handled during the Railway deployment stage.
+
+==================================================
+22. GOOGLE LOGIN
+==================================================
+
+Google is enabled in Clerk Development.
+
+Use Clerk's configured Google social connection.
+
+Do not build a separate Google authentication system.
+
+Do not request unnecessary Google scopes.
+
+We currently only need authentication.
+
+==================================================
+23. ERROR HANDLING
+==================================================
+
+Add clear handling for cases such as:
+
+- Clerk user authenticated but database mapping missing
+- Duplicate existing email
+- Existing user conflict
+- Database unavailable
+- Unauthorized user
+- Non-admin attempting /admin
+- Expired Clerk session
+- Missing Clerk environment variables
+
+Do not expose secrets or internal stack traces to the client.
+
+==================================================
+24. TEST PLAN
+==================================================
+
+After implementation, test ALL of the following:
+
+ADMIN
+
+1. Existing STATS admin signs in through Clerk Email.
+2. Clerk admin maps to existing PostgreSQL admin user.
+3. Existing users.id remains unchanged.
+4. role remains admin.
+5. /admin opens.
+6. Products load.
+7. Services load.
+8. Orders load.
+9. Bookings load.
+10. Quotes load.
+11. Equipment loads.
+12. Portfolio loads.
+13. Payment/contact settings load.
+14. Existing content can still be edited.
+15. Admin logout works.
+
+NEW CUSTOMER
+
+16. Register with Email through Clerk.
+17. PostgreSQL customer is created.
+18. Identity mapping is created.
+19. Customer dashboard loads.
+20. Customer logout works.
+
+GOOGLE
+
+21. Sign up with Google.
+22. Clerk user is created.
+23. PostgreSQL user is safely created or linked.
+24. Customer dashboard loads.
+25. Re-login preserves the same database user.
+
+EXISTING CUSTOMER
+
+26. Existing customer signs in using same verified email.
+27. Clerk identity links to existing PostgreSQL user.
+28. Existing order history remains.
+29. Existing bookings remain.
+30. Existing addresses remain.
+31. Existing invoices remain.
+32. No duplicate user is created.
+
+SECURITY
+
+33. Customer cannot access /admin.
+34. Admin endpoints return 403 for normal customer.
+35. Unauthenticated private routes return 401.
+36. User cannot retrieve another customer's order.
+37. User cannot retrieve another customer's rental.
+38. User cannot edit another customer's address.
+
+GUEST
+
+39. Guest product browsing works.
+40. Guest services work.
+41. Guest cart works.
+42. Guest booking works.
+43. Guest quote works.
+44. Guest equipment rental works.
+45. Guest cart survives normal browsing.
+46. Guest-to-login cart behavior works.
+
+DATA
+
+47. Existing product count unchanged.
+48. Existing services count unchanged.
+49. Existing orders count unchanged.
+50. Existing bookings count unchanged.
+51. Existing quote count unchanged.
+52. Existing admin-entered content unchanged.
+
+==================================================
+25. DO NOT DELETE LEGACY AUTH AFTER TESTING
+==================================================
+
+Even if all tests pass:
+
+DO NOT remove legacy auth automatically.
+
+Stop and report the results.
+
+The final removal of:
+
+- local authentication
+- Replit OIDC
+- phone OTP
+- legacy redirects
+- password hashes
+- seeded admin
+
+will happen in a separate approved cleanup phase.
+
+==================================================
+26. COMPLETION REPORT
+==================================================
+
+When finished, provide a detailed report containing:
+
+1. Packages installed
+2. Files changed
+3. Database migration performed
+4. user_identities schema
+5. Clerk middleware implementation
+6. Clerk → PostgreSQL resolver behavior
+7. Admin migration/linking method
+8. Existing-customer linking method
+9. New-customer provisioning method
+10. Guest-session handling
+11. Cart behavior
+12. Routes changed
+13. Security fixes completed
+14. Tests passed
+15. Tests failed
+16. Data-count comparison before/after
+17. Any existing users requiring manual migration
+18. Any risks discovered
+19. Any actions I need to perform manually in Clerk
+20. Any environment variables still required
+21. Whether the existing administrator successfully works through Clerk
+22. Whether legacy auth remains available
+23. Recommendation for the final cleanup phase
+
+Do not deploy.
+
+Do not push production configuration.
+
+Do not touch Railway.
+
+Do not modify DNS.
+
+Stop after the development migration and report back to me.
