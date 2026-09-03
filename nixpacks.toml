@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["npx --yes npm@10.8.3 ci --include=dev --no-audit --no-fund"]
+cmds = ["corepack pnpm install --frozen-lockfile --prod=false"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["corepack pnpm run build"]
 
 [start]
-cmd = "npm run start"
+cmd = "node dist/index.cjs"
