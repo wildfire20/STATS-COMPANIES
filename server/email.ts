@@ -1,7 +1,5 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const FROM_EMAIL = 'STATS Companies <onboarding@resend.dev>';
 const COMPANY_NAME = 'STATS Companies';
 
@@ -12,12 +10,14 @@ interface EmailData {
 }
 
 async function sendEmail({ to, subject, html }: EmailData): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
     console.log('Email not sent - RESEND_API_KEY not configured');
     return false;
   }
 
   try {
+    const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [to],
