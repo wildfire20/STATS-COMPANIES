@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useClerk } from "@clerk/react";
+import { useLocalUser } from "@/hooks/useLocalUser";
 import { useDemo } from "@/hooks/useDemo";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +62,8 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
-  const { user, isAuthenticated, isLoading, isAdmin } = useAuth();
+  const { user, isAuthenticated, isLoading, isAdmin } = useLocalUser();
+  const { signOut } = useClerk();
   const { isDemo, demoName, demoExpiresAt, isLoading: demoLoading } = useDemo();
   const { toast } = useToast();
   const [location] = useLocation();
@@ -94,7 +97,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/sign-in";
         }, 500);
       } else if (isAuthenticated && !isAdmin) {
         toast({
@@ -200,7 +203,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
               variant="outline" 
               className="w-full"
               onClick={async () => {
-                await fetch("/api/demo/logout", { method: "POST" });
+                await apiRequest("POST", "/api/demo/logout");
                 window.location.href = "/";
               }}
             >
@@ -208,12 +211,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
               Exit Demo
             </Button>
           ) : (
-            <a href="/api/logout">
-              <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={() => signOut({ redirectUrl: "/" })}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
-              </Button>
-            </a>
+            </Button>
           )}
         </div>
       </aside>

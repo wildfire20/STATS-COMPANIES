@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@clerk/react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCart } from "@/contexts/CartContext";
@@ -48,13 +49,11 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState<string>("bank_transfer");
   const [notes, setNotes] = useState("");
 
-  const { data: user, isLoading: userLoading } = useQuery<{ id: string; firstName?: string; lastName?: string; email?: string }>({
-    queryKey: ["/api/auth/user"],
-  });
+  const { isLoaded: userLoaded, isSignedIn } = useAuth();
 
   const { data: addresses, isLoading: addressesLoading } = useQuery<Address[]>({
     queryKey: ["/api/client/addresses"],
-    enabled: !!user,
+    enabled: userLoaded && !!isSignedIn,
   });
 
   const { data: paymentMethods, isLoading: paymentMethodsLoading } = useQuery<PaymentMethod[]>({
@@ -128,7 +127,7 @@ export default function Checkout() {
   const tax = subtotal * 0.15;
   const total = subtotal + tax;
 
-  if (userLoading) {
+  if (!userLoaded) {
     return (
       <div className="container mx-auto px-4 py-12">
         <Skeleton className="h-10 w-64 mb-8" />
@@ -142,7 +141,7 @@ export default function Checkout() {
     );
   }
 
-  if (!user) {
+  if (!isSignedIn) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center">
         <Card className="max-w-md w-full mx-4">
@@ -152,7 +151,7 @@ export default function Checkout() {
             <p className="text-muted-foreground mb-6">
               You need to be signed in to complete your checkout.
             </p>
-            <Link href="/login">
+            <Link href="/sign-in">
               <Button className="rounded-full px-6" data-testid="button-login">
                 Sign In to Continue
                 <ArrowRight className="h-4 w-4 ml-2" />

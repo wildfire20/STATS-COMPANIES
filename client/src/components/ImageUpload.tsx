@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ImageUploadProps {
   value?: string;
@@ -45,10 +46,7 @@ export function ImageUpload({ value, onChange, label = "Image" }: ImageUploadPro
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await apiRequest('POST', '/api/upload', formData);
 
       if (!response.ok) {
         const error = await response.json();

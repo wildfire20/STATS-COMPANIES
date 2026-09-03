@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/useAuth";
+import { useClerk } from "@clerk/react";
+import { useLocalUser } from "@/hooks/useLocalUser";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +33,8 @@ interface ClientLayoutProps {
 }
 
 export default function ClientLayout({ children, title }: ClientLayoutProps) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useLocalUser();
+  const { signOut } = useClerk();
   const [location, setLocation] = useLocation();
 
   const { data: unreadCount } = useQuery<number>({
@@ -44,7 +46,7 @@ export default function ClientLayout({ children, title }: ClientLayoutProps) {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       const currentPath = window.location.pathname;
-      setLocation(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      setLocation(`/sign-in?redirect=${encodeURIComponent(currentPath)}`);
     }
   }, [isAuthenticated, isLoading, setLocation]);
 
@@ -107,11 +109,7 @@ export default function ClientLayout({ children, title }: ClientLayoutProps) {
           <Button 
             variant="outline" 
             className="w-full"
-            onClick={(e) => {
-              e.preventDefault();
-              fetch('/api/auth/local/logout', { method: 'POST' })
-                .then(() => window.location.href = '/');
-            }}
+            onClick={() => signOut({ redirectUrl: "/" })}
             data-testid="button-logout"
           >
             <LogOut className="h-4 w-4 mr-2" />

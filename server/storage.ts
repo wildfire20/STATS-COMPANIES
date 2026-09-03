@@ -135,6 +135,7 @@ export interface IStorage {
   removeCartItem(id: string): Promise<boolean>;
   clearCart(userId?: string, sessionId?: string): Promise<boolean>;
   getCartTotal(userId?: string, sessionId?: string): Promise<{ subtotal: number; itemCount: number }>;
+  mergeGuestCart(userId: string, sessionId: string): Promise<void>;
   
   // Payment settings operations
   getPaymentSettings(): Promise<PaymentSetting[]>;
@@ -268,14 +269,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
-    const [product] = await db.insert(products).values(insertProduct).returning();
+    const [product] = await db.insert(products).values(insertProduct as any).returning();
     return product;
   }
 
   async updateProduct(id: string, updates: Partial<InsertProduct>): Promise<Product | undefined> {
     const [product] = await db
       .update(products)
-      .set({ ...updates, updatedAt: new Date() })
+      .set({ ...updates, updatedAt: new Date() } as any)
       .where(eq(products.id, id))
       .returning();
     return product;
@@ -404,7 +405,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
-    const [order] = await db.insert(orders).values(insertOrder).returning();
+    const [order] = await db.insert(orders).values(insertOrder as any).returning();
     return order;
   }
 
@@ -703,6 +704,14 @@ export class DatabaseStorage implements IStorage {
       await db.delete(cartItems).where(eq(cartItems.sessionId, sessionId));
     }
     return true;
+  }
+
+  async mergeGuestCart(userId: string, sessionId: string): Promise<void> {
+    // Only unowned rows for this signed anonymous-cart id can be claimed.
+    await db
+      .update(cartItems)
+      .set({ userId, sessionId: null, updatedAt: new Date() })
+      .where(and(eq(cartItems.sessionId, sessionId), isNull(cartItems.userId)));
   }
 
   async getCartTotal(userId?: string, sessionId?: string): Promise<{ subtotal: number; itemCount: number }> {

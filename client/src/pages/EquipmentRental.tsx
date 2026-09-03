@@ -45,8 +45,7 @@ export default function EquipmentRental() {
     queryKey: ["/api/equipment", selectedCategory],
     queryFn: async () => {
       const url = selectedCategory === "all" ? "/api/equipment" : `/api/equipment?category=${selectedCategory}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch equipment");
+      const response = await apiRequest("GET", url);
       return response.json();
     },
   });

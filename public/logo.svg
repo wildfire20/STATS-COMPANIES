@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 72" role="img" aria-label="STATS Companies">
+  <rect width="260" height="72" rx="12" fill="#1e3a5f"/>
+  <path d="M28 17h31v8H38v7h18v8H38v15h-10V17Zm39 0h10v38H67V17Zm16 0h11l10 17 10-17h11l-16 25v13H99V42L83 17Z" fill="#fff"/>
+  <text x="130" y="32" fill="#fff" font-family="Arial,sans-serif" font-size="19" font-weight="700">STATS</text>
+  <text x="130" y="51" fill="#a9d5e3" font-family="Arial,sans-serif" font-size="13" letter-spacing="1">COMPANIES</text>
+</svg>

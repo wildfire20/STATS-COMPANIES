@@ -3,7 +3,7 @@ import { pgTable, text, varchar, integer, boolean, timestamp, decimal, jsonb, in
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table for Replit Auth
+// Legacy session storage table retained for existing database compatibility.
 export const sessions = pgTable(
   "sessions",
   {
@@ -14,7 +14,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for Replit Auth and local auth
+// Local application user records retain roles and relationships; Clerk owns identity.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),

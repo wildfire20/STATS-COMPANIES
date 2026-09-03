@@ -10,11 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { 
-  User, 
+import {
+  User,
   Mail, 
   Phone, 
-  Camera,
   Save,
   Bell,
   Shield
@@ -30,8 +29,6 @@ export default function ClientProfile() {
   });
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
     phone: "",
     marketingOptIn: false,
   });
@@ -43,7 +40,7 @@ export default function ClientProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/client/profile"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully.",
@@ -62,8 +59,6 @@ export default function ClientProfile() {
   const handleEdit = () => {
     if (user) {
       setFormData({
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
         phone: user.phone || "",
         marketingOptIn: user.marketingOptIn || false,
       });
@@ -79,8 +74,6 @@ export default function ClientProfile() {
     setIsEditing(false);
     if (user) {
       setFormData({
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
         phone: user.phone || "",
         marketingOptIn: user.marketingOptIn || false,
       });
@@ -127,13 +120,6 @@ export default function ClientProfile() {
                     {user?.firstName?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
-                <Button 
-                  variant="secondary" 
-                  size="icon" 
-                  className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full hover-elevate"
-                >
-                  <Camera className="h-4 w-4" />
-                </Button>
               </div>
               <div className="flex-1">
                 <h2 className="text-xl font-semibold">
@@ -158,7 +144,7 @@ export default function ClientProfile() {
             <CardTitle>Personal Information</CardTitle>
             <CardDescription>
               {isEditing 
-                ? "Update your personal details below" 
+                ? "Update your contact preferences below"
                 : "Your account information"
               }
             </CardDescription>
@@ -167,37 +153,17 @@ export default function ClientProfile() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                {isEditing ? (
-                  <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="Enter first name"
-                    data-testid="input-first-name"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{user?.firstName || "-"}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{user?.firstName || "-"}</span>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                {isEditing ? (
-                  <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder="Enter last name"
-                    data-testid="input-last-name"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{user?.lastName || "-"}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>{user?.lastName || "-"}</span>
+                </div>
               </div>
             </div>
 

@@ -10,7 +10,7 @@ A complete e-commerce website for STATS Companies, a digital printing, photograp
 - **Backend:** Express.js with TypeScript
 - **Database:** PostgreSQL with Drizzle ORM
 - **Storage:** Replit Object Storage for image uploads
-- **Authentication:** Dual system (Replit Auth + local email/password)
+- **Authentication:** Replit-managed Clerk with local role authorization
 - **Routing:** Wouter for client-side, Express for API
 - **State Management:** TanStack Query (React Query)
 
@@ -89,8 +89,7 @@ A complete e-commerce website for STATS Companies, a digital printing, photograp
 
 ## Admin Dashboard
 Complete admin dashboard accessible at `/admin` with the following features:
-- **Authentication:** Dual login system (Replit Auth + local credentials)
-- **Demo Credentials:** admin@statscompanies.co.za / Admin@123
+- **Authentication:** Clerk sign-in with locally stored roles
 
 ### Admin Management Pages
 1. **Dashboard** - Overview with stats and charts
@@ -143,10 +142,8 @@ Complete client account dashboard accessible at `/dashboard` for registered cust
 6. **Addresses** - Manage delivery and billing addresses
 
 ### Authentication & Routing
-- **Registration:** Email, password, phone (optional), marketing opt-in
-- **Login Redirect:** 
-  - Admin users → /admin
-  - Customer users → /dashboard (or original destination if deep-linked)
+- **Registration:** Clerk-managed email/password and configured social providers
+- **Login Redirect:** Clerk-managed sign-in returns customers to the app.
 - **Protected Routes:** All /dashboard/* routes require authentication
 - **Deep Linking:** Unauthenticated deep links redirect to login with return URL
 
@@ -194,12 +191,11 @@ Multi-step checkout wizard at `/checkout`:
 ## Recent Changes
 - **Shopping Cart System** - Added complete cart and checkout functionality with cart drawer, cart page, multi-step checkout wizard, and order creation
 - **Client Dashboard** - Added complete client account system with 6 pages (Dashboard, Orders, Bookings, Invoices, Profile, Addresses)
-- **Enhanced Registration** - Added phone number field and marketing opt-in to registration form
-- **Role-based Redirect** - Admin users redirect to /admin, customers to /dashboard after login
+- **Authentication migration** - Clerk manages identity and sessions; local user records retain roles and relationships
+- **Migration identity bridge** - Provisioning places the preserved Replit external ID in `sessionClaims.userId` for migrated accounts. If a former local-only account has no ID bridge, its verified Clerk session email is normalized and matched to its existing local row, retaining that row's ID, role, and related data.
 - **Deep Link Support** - Protected routes preserve original destination for customers
 - Added comprehensive admin dashboard with 10 management pages
 - Implemented image upload system using Replit Object Storage
-- Added dual authentication (Replit Auth + local login)
 - Migrated from in-memory to PostgreSQL database
 - Seeded database with sample content
 

@@ -1,7 +1,7 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
+import { getClerkIdentity, isAuthenticated, isAdmin, resolveOptionalDbUser } from "./clerkAuth";
 import { ObjectStorageService, ObjectNotFoundError, objectStorageClient } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
 import { 
@@ -55,229 +55,74 @@ const videoUpload = multer({
   }
 });
 
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+const ANONYMOUS_CART_COOKIE = "anonymous_cart_id";
+const ANONYMOUS_CART_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+
+function signedAnonymousCartId(cartId: string): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) return cartId;
+  const signature = crypto.createHmac("sha256", secret).update(cartId).digest("base64url");
+  return `${cartId}.${signature}`;
 }
 
-async function seedAdminUser() {
-  const existingAdmin = await storage.getUserByEmail("admin@statscompanies.co.za");
-  if (!existingAdmin) {
-    await storage.createLocalUser(
-      "admin@statscompanies.co.za",
-      hashPassword("Admin@123"),
-      "Admin",
-      "User",
-      "admin"
-    );
-    console.log("Example admin account created: admin@statscompanies.co.za / Admin@123");
+function readAnonymousCartId(req: Request): string | undefined {
+  const rawCookie = req.headers.cookie
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${ANONYMOUS_CART_COOKIE}=`))
+    ?.slice(ANONYMOUS_CART_COOKIE.length + 1);
+  if (!rawCookie) return undefined;
+
+  const [cartId, signature, ...extra] = rawCookie.split(".");
+  if (extra.length || !/^[0-9a-f-]{36}$/i.test(cartId)) return undefined;
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) return signature ? undefined : cartId;
+  if (!signature) return undefined;
+
+  const expected = crypto.createHmac("sha256", secret).update(cartId).digest("base64url");
+  const provided = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  return provided.length === expectedBuffer.length && crypto.timingSafeEqual(provided, expectedBuffer)
+    ? cartId
+    : undefined;
+}
+
+function getOrCreateAnonymousCartId(req: Request, res: Response): string {
+  const existing = readAnonymousCartId(req);
+  if (existing) return existing;
+
+  const cartId = randomUUID();
+  res.cookie(ANONYMOUS_CART_COOKIE, signedAnonymousCartId(cartId), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: ANONYMOUS_CART_MAX_AGE_SECONDS * 1000,
+    path: "/",
+  });
+  return cartId;
+}
+
+async function getCartScope(req: Request, res: Response): Promise<{ userId?: string; sessionId?: string }> {
+  const dbUser = await resolveOptionalDbUser(req);
+  if (dbUser) {
+    const guestCartId = readAnonymousCartId(req);
+    if (guestCartId) {
+      await storage.mergeGuestCart(dbUser.id, guestCartId);
+    }
+    return { userId: dbUser.id };
   }
+  return { sessionId: getOrCreateAnonymousCartId(req, res) };
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {
-  await setupAuth(app);
-  
-  await seedAdminUser();
-
   // Health check endpoint for Railway
   app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  app.post('/api/auth/local/login', async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
-      }
-
-      const user = await storage.getUserByEmail(email);
-      
-      if (!user || !user.password) {
-        return res.status(401).json({ message: "Invalid email or password" });
-      }
-
-      const hashedPassword = hashPassword(password);
-      if (user.password !== hashedPassword) {
-        return res.status(401).json({ message: "Invalid email or password" });
-      }
-
-      (req.session as any).userId = user.id;
-      (req.session as any).localAuth = true;
-      
-      const { password: _, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword });
-    } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Login failed" });
-    }
-  });
-
-  app.post('/api/auth/local/register', async (req, res) => {
-    try {
-      const { email, password, firstName, lastName } = req.body;
-      
-      if (!email || !password || !firstName || !lastName) {
-        return res.status(400).json({ message: "All fields are required" });
-      }
-
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ message: "Email already registered" });
-      }
-
-      const hashedPassword = hashPassword(password);
-      const user = await storage.createLocalUser(email, hashedPassword, firstName, lastName);
-      
-      (req.session as any).userId = user.id;
-      (req.session as any).localAuth = true;
-
-      const { password: _, ...userWithoutPassword } = user;
-      res.status(201).json({ user: userWithoutPassword });
-    } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ message: "Registration failed" });
-    }
-  });
-
-  app.post('/api/auth/local/logout', (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Logout failed" });
-      }
-      res.json({ message: "Logged out successfully" });
-    });
-  });
-
-  app.post('/api/auth/check-email', async (req, res) => {
-    try {
-      const { email } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      const user = await storage.getUserByEmail(email);
-      res.json({ exists: !!user });
-    } catch (error) {
-      console.error("Email check error:", error);
-      res.json({ exists: false });
-    }
-  });
-
-  // Phone OTP authentication routes
-  app.post('/api/auth/phone/send-otp', async (req, res) => {
-    try {
-      const { phone } = req.body;
-      
-      if (!phone) {
-        return res.status(400).json({ message: "Phone number is required" });
-      }
-
-      // Validate phone format (South African format)
-      const cleanPhone = phone.replace(/\s+/g, '').replace(/^0/, '+27');
-      if (!/^\+27\d{9}$/.test(cleanPhone)) {
-        return res.status(400).json({ message: "Invalid South African phone number format" });
-      }
-
-      // Rate limiting: max 5 OTPs per phone per 15 minutes
-      const recentCount = await storage.getRecentOtpCount(cleanPhone, 15);
-      if (recentCount >= 5) {
-        return res.status(429).json({ message: "Too many OTP requests. Please wait 15 minutes." });
-      }
-
-      // Generate 6-digit OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
-      await storage.createOtp(cleanPhone, otpHash, expiresAt);
-
-      // For demo/development, log the OTP (in production, use SMS service like Twilio)
-      console.log(`[OTP] Phone: ${cleanPhone}, Code: ${otp}`);
-
-      res.json({ message: "OTP sent successfully", phone: cleanPhone });
-    } catch (error) {
-      console.error("Send OTP error:", error);
-      res.status(500).json({ message: "Failed to send OTP" });
-    }
-  });
-
-  app.post('/api/auth/phone/verify-otp', async (req, res) => {
-    try {
-      const { phone, otp, firstName, lastName } = req.body;
-      
-      if (!phone || !otp) {
-        return res.status(400).json({ message: "Phone and OTP are required" });
-      }
-
-      const cleanPhone = phone.replace(/\s+/g, '').replace(/^0/, '+27');
-      const otpRecord = await storage.getValidOtp(cleanPhone);
-
-      if (!otpRecord) {
-        return res.status(400).json({ message: "OTP expired or not found. Please request a new one." });
-      }
-
-      // Check if max attempts already reached BEFORE attempting verification
-      const currentAttempts = otpRecord.attempts || 0;
-      if (currentAttempts >= 5) {
-        return res.status(400).json({ message: "Too many failed attempts. Please request a new OTP." });
-      }
-
-      // Verify OTP hash
-      const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
-      
-      if (otpRecord.codeHash !== otpHash) {
-        await storage.incrementOtpAttempts(otpRecord.id);
-        const attemptsLeft = 5 - (currentAttempts + 1);
-        if (attemptsLeft <= 0) {
-          return res.status(400).json({ message: "Too many failed attempts. Please request a new OTP." });
-        }
-        return res.status(400).json({ message: `Invalid OTP. ${attemptsLeft} attempts remaining.` });
-      }
-
-      // Mark OTP as verified immediately to prevent reuse
-      await storage.markOtpVerified(otpRecord.id);
-
-      // Find or create user by phone
-      let user = await storage.getUserByPhone(cleanPhone);
-      
-      if (!user) {
-        user = await storage.createPhoneUser(cleanPhone, firstName, lastName);
-      }
-
-      // Set session
-      (req.session as any).userId = user.id;
-      (req.session as any).localAuth = true;
-      (req.session as any).phoneAuth = true;
-
-      const { password: _, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword, isNewUser: !user.firstName });
-    } catch (error) {
-      console.error("Verify OTP error:", error);
-      res.status(500).json({ message: "Failed to verify OTP" });
-    }
-  });
-
-  app.get('/api/auth/user', async (req: any, res) => {
-    try {
-      if ((req.session as any)?.localAuth && (req.session as any)?.userId) {
-        const user = await storage.getUser((req.session as any).userId);
-        if (user) {
-          const { password: _, ...userWithoutPassword } = user;
-          return res.json(userWithoutPassword);
-        }
-      }
-      
-      if (req.user?.claims?.sub) {
-        const userId = req.user.claims.sub;
-        const user = await storage.getUser(userId);
-        return res.json(user);
-      }
-      
-      return res.status(401).json({ message: "Not authenticated" });
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
+  // App authorization state remains local while Clerk owns identity and sessions.
+  app.get("/api/auth/me", isAuthenticated, (req, res) => {
+    res.json({ id: req.dbUser!.id, role: req.dbUser!.role });
   });
 
   // Image upload endpoint
@@ -969,8 +814,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Send order status update email
       if (order.customerEmail && order.customerName && order.items) {
         const items = Array.isArray(order.items) 
-          ? order.items.map((item: { name: string; quantity: number; price: number }) => ({
-              name: item.name,
+          ? order.items.map((item) => ({
+              name: item.productName,
               quantity: item.quantity,
               price: String(item.price)
             }))
@@ -1024,7 +869,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           booking.email,
           booking.name,
           booking.serviceName,
-          booking.date,
+          new Date(booking.date),
           status,
           booking.notes || undefined
         ).catch(err => console.error("Failed to send booking status email:", err));
@@ -1063,12 +908,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       // Send quote status update email
-      if (quote.email && quote.name && quote.serviceName) {
+      if (quote.email && quote.name && quote.serviceType) {
         const quoteNumber = `QT-${quote.id.substring(0, 8).toUpperCase()}`;
         sendQuoteStatusEmail(
           quote.email,
           quote.name,
-          quote.serviceName,
+          quote.serviceType,
           quoteNumber,
           status,
           estimatedPrice,
@@ -1359,7 +1204,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
-    const userId = req.user?.claims?.sub;
+    const userId = req.dbUser!.id;
     const objectStorageService = new ObjectStorageService();
     try {
       const objectFile = await objectStorageService.getObjectEntityFile(req.path);
@@ -1397,7 +1242,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       return res.status(400).json({ error: "imageURL is required" });
     }
 
-    const userId = req.user?.claims?.sub;
+    const userId = req.dbUser!.id;
 
     try {
       const objectStorageService = new ObjectStorageService();
@@ -1422,13 +1267,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // Helper to get authenticated user ID
   const getAuthenticatedUserId = (req: any): string | null => {
-    if ((req.session as any)?.localAuth && (req.session as any)?.userId) {
-      return (req.session as any).userId;
-    }
-    if (req.user?.claims?.sub) {
-      return req.user.claims.sub;
-    }
-    return null;
+    return req.dbUser?.id || null;
   };
 
   // Client Dashboard Stats
@@ -1479,7 +1318,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      const identity = getClerkIdentity(req);
+      res.json({
+        ...userWithoutPassword,
+        email: identity.email ?? user.email,
+        firstName: identity.firstName ?? user.firstName,
+        lastName: identity.lastName ?? user.lastName,
+        username: identity.username,
+      });
     } catch (error) {
       console.error("Error fetching profile:", error);
       res.status(500).json({ error: "Failed to fetch profile" });
@@ -1493,12 +1339,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const { firstName, lastName, phone, profileImageUrl, marketingOptIn } = req.body;
+      const { phone, marketingOptIn } = req.body;
       const user = await storage.updateUserProfile(userId, {
-        firstName,
-        lastName,
         phone,
-        profileImageUrl,
         marketingOptIn,
       });
 
@@ -1507,7 +1350,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      const identity = getClerkIdentity(req);
+      res.json({
+        ...userWithoutPassword,
+        email: identity.email ?? user.email,
+        firstName: identity.firstName ?? user.firstName,
+        lastName: identity.lastName ?? user.lastName,
+        username: identity.username,
+      });
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ error: "Failed to update profile" });
@@ -1788,8 +1638,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/cart", async (req: any, res) => {
     try {
-      const userId = getAuthenticatedUserId(req);
-      const sessionId = req.sessionID;
+      const { userId, sessionId } = await getCartScope(req, res);
       
       const items = await storage.getCartItems(userId || undefined, !userId ? sessionId : undefined);
       const total = await storage.getCartTotal(userId || undefined, !userId ? sessionId : undefined);
@@ -1803,8 +1652,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/cart", async (req: any, res) => {
     try {
-      const userId = getAuthenticatedUserId(req);
-      const sessionId = req.sessionID;
+      const { userId, sessionId } = await getCartScope(req, res);
       
       const { productId, productName, productImage, quantity, options, unitPrice } = req.body;
       
@@ -1838,8 +1686,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.patch("/api/cart/:id", async (req: any, res) => {
     try {
-      const userId = getAuthenticatedUserId(req);
-      const sessionId = req.sessionID;
+      const { userId, sessionId } = await getCartScope(req, res);
       
       const { quantity } = req.body;
       
@@ -1875,8 +1722,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/cart/:id", async (req: any, res) => {
     try {
-      const userId = getAuthenticatedUserId(req);
-      const sessionId = req.sessionID;
+      const { userId, sessionId } = await getCartScope(req, res);
       
       const cartItem = await storage.getCartItem(req.params.id);
       if (!cartItem) {
@@ -1901,8 +1747,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.delete("/api/cart", async (req: any, res) => {
     try {
-      const userId = getAuthenticatedUserId(req);
-      const sessionId = req.sessionID;
+      const { userId, sessionId } = await getCartScope(req, res);
       
       await storage.clearCart(userId || undefined, !userId ? sessionId : undefined);
       
@@ -1944,8 +1789,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }));
 
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-      const customerName = user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Customer" : "Customer";
-      const customerEmail = user?.email || "noemail@example.com";
+      const identity = getClerkIdentity(req);
+      const customerName = `${identity.firstName || user?.firstName || ""} ${identity.lastName || user?.lastName || ""}`.trim() || "Customer";
+      const customerEmail = identity.email || user?.email;
+      if (!customerEmail) {
+        return res.status(400).json({ error: "A verified email address is required for checkout" });
+      }
       const deliveryAddress = address ? `${address.street}, ${address.city}, ${address.province}, ${address.postalCode}` : undefined;
 
       const order = await storage.createOrder({
@@ -2245,6 +2094,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  /*
   // Demo Account Routes
   // Public demo login endpoint
   app.post("/api/demo/login", async (req, res) => {
@@ -2307,6 +2157,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json({ success: true });
   });
 
+  */
   // Admin Demo Account Management Routes
   app.get("/api/admin/demo-accounts", isAuthenticated, isAdmin, async (req, res) => {
     try {

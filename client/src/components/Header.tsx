@@ -14,7 +14,8 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CartButton } from "@/components/CartDrawer";
 import { Menu, Search, User, LogOut, Settings, X, LayoutDashboard, ShoppingCart } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useClerk } from "@clerk/react";
+import { useLocalUser } from "@/hooks/useLocalUser";
 import { motion } from "framer-motion";
 import logoImage from "@assets/stats_business_card_1765625638234.png";
 
@@ -33,7 +34,8 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user, isLoading, isAuthenticated, isAdmin } = useAuth();
+  const { user, isLoading, isAuthenticated, isAdmin } = useLocalUser();
+  const { signOut } = useClerk();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,16 +46,11 @@ export function Header() {
   }, []);
 
   const handleLogin = () => {
-    setLocation("/login");
+    setLocation("/sign-in");
   };
 
   const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/local/logout", { method: "POST" });
-      window.location.href = "/";
-    } catch (error) {
-      window.location.href = "/api/logout";
-    }
+    await signOut({ redirectUrl: "/" });
   };
 
   const getInitials = (name: string) => {
@@ -134,7 +131,7 @@ export function Header() {
                     <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground text-xs font-semibold">
                       {getInitials(user.firstName && user.lastName 
                         ? `${user.firstName} ${user.lastName}` 
-                        : user.email || "U")}
+                        : user.primaryEmailAddress?.emailAddress || "U")}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -144,7 +141,7 @@ export function Header() {
                   <p className="text-sm font-semibold font-display">
                     {user.firstName} {user.lastName}
                   </p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                  <p className="text-xs text-muted-foreground">{user.primaryEmailAddress?.emailAddress}</p>
                 </div>
                 <DropdownMenuSeparator />
                 {isAdmin ? (
@@ -292,12 +289,12 @@ export function Header() {
                           <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-primary-foreground font-semibold">
                             {getInitials(user.firstName && user.lastName 
                               ? `${user.firstName} ${user.lastName}` 
-                              : user.email || "U")}
+                              : user.primaryEmailAddress?.emailAddress || "U")}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold truncate">{user.firstName} {user.lastName}</p>
-                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.primaryEmailAddress?.emailAddress}</p>
                         </div>
                       </div>
                       {isAdmin ? (

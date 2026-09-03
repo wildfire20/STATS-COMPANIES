@@ -1,0 +1,35 @@
+Before I approve/apply the completed Clerk migration, perform one final read-only verification and report back. Do not change any code, database records, or authentication configuration.
+
+I need you to verify the following:
+
+The PostgreSQL users table still contains all 16 existing users and no user records were deleted or replaced.
+Explain exactly which 3 users were migrated to Clerk and why only those 3 were migrated.
+Confirm what happens when one of the remaining existing users attempts to sign in using their existing email address.
+Confirm whether verified-email fallback safely links that Clerk identity to the existing PostgreSQL user rather than creating a duplicate user.
+Identify the current STATS administrator PostgreSQL record and confirm its users.id and role = admin remain unchanged.
+Confirm whether the existing STATS administrator has actually been tested through Clerk. If not, clearly state the exact steps required to link/test the admin.
+Confirm that after Clerk authentication, admin authorization still comes from PostgreSQL users.role, not from a browser value or Clerk-supplied role.
+Confirm that existing products, services, service plans, orders, bookings, quotes, addresses, invoices, notifications, equipment, rentals, portfolio items, testimonials and team records remain unchanged.
+Provide current record counts for all those tables and compare them with these pre-migration counts:
+Users: 16
+Products: 8
+Services: 8
+Service plans: 4
+Orders: 8
+Bookings: 2
+Quote requests: 2
+Addresses: 5
+Invoices: 8
+Notifications: 8
+Equipment: 2
+Equipment rentals: 5
+Portfolio items: 29
+Testimonials: 7
+Team members: 3
+You reported that legacy authentication runtime files and dependencies were removed. Explain what recovery/fallback remains if the STATS administrator cannot authenticate through Clerk.
+Confirm that guest bookings, quotes, equipment rentals and guest cart functionality remain available without a Clerk account.
+Confirm that no production Clerk instance, Railway configuration, production database or DNS was touched.
+Confirm which Clerk application/environment this implementation is connected to and whether it is Development only.
+Confirm Google and Email are the only enabled authentication methods used by the application.
+
+This is verification only. Do not make further changes.

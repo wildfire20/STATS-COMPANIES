@@ -1,4 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
+import { clerkMiddleware } from "@clerk/express";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
+import { CLERK_PROXY_PATH, clerkProxyMiddleware, getClerkProxyHost } from "./middlewares/clerkProxyMiddleware";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -6,6 +10,60 @@ import { createServer } from "http";
 const app = express();
 const httpServer = createServer(app);
 
+function requestHost(req: Request): string | undefined {
+  const forwardedHost = req.header("x-forwarded-host")?.split(",")[0]?.trim();
+  return forwardedHost || req.header("host")?.trim();
+}
+
+function requestProtocol(req: Request): string {
+  return req.header("x-forwarded-proto")?.split(",")[0]?.trim() || req.protocol;
+}
+
+function developmentOrigins(): Set<string> {
+  const domains = [process.env.REPLIT_DEV_DOMAIN, process.env.REPLIT_DOMAINS]
+    .flatMap((value) => value?.split(",") ?? [])
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const origins = new Set<string>();
+  for (const domain of domains) {
+    try {
+      const url = new URL(domain.includes("://") ? domain : `https://${domain}`);
+      if (url.pathname === "/" && !url.search && !url.hash) origins.add(url.origin);
+    } catch {
+      // Ignore malformed environment configuration rather than widening CORS.
+    }
+  }
+  return origins;
+}
+
+const allowedDevelopmentOrigins = developmentOrigins();
+
+function isAllowedCorsOrigin(req: Request, origin: string | undefined): boolean {
+  if (!origin) return true;
+  try {
+    const parsedOrigin = new URL(origin);
+    if (parsedOrigin.origin !== origin) return false;
+    const host = requestHost(req);
+    if (host && origin === `${requestProtocol(req)}://${host}`) return true;
+    return allowedDevelopmentOrigins.has(origin);
+  } catch {
+    return false;
+  }
+}
+
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+app.use(cors((req, callback) => callback(null, {
+  credentials: true,
+  origin: isAllowedCorsOrigin(req, req.header("origin")),
+})));
+app.use(
+  clerkMiddleware((req) => ({
+    publishableKey: publishableKeyFromHost(
+      getClerkProxyHost(req) ?? "",
+      process.env.CLERK_PUBLISHABLE_KEY,
+    ),
+  })),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
