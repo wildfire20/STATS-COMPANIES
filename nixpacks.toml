@@ -1,11 +1,11 @@
 [phases.setup]
-nixPkgs = ["nodejs_22"]
+nixPkgs = ["nodejs_22", "pnpm_10"]
 
 [phases.install]
-cmds = ["corepack pnpm install --frozen-lockfile --prod=false"]
+cmds = ["pnpm install --frozen-lockfile --prod=false"]
 
 [phases.build]
-cmds = ["corepack pnpm run build"]
+cmds = ["pnpm run build"]
 
 [start]
 cmd = "node dist/index.cjs"

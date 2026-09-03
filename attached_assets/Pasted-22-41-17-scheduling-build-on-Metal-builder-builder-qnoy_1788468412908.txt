@@ -1,0 +1,65 @@
+22:41:17
+scheduling build on Metal builder "builder-qnoydj"
+22:41:22
+unpacking archive
+22:41:23
+using build driver nixpacks-v1.41.0
+22:41:23
+[railway] prepare nixpacks-v1.41.0
+22:41:23
+local://prepare-driver
+22:41:23
+local://prepare-context
+22:41:23
+docker-image://ghcr.io/railwayapp/railpack-builder:latest
+22:41:23
+local://prepare-driver
+22:41:23
+local://prepare-context
+22:41:23
+docker-image://ghcr.io/railwayapp/railpack-builder:latest
+...and 69 more logs
+Ah! I see the problem now. Your recent commits have introduced two separate build failures on top of the original health check issue. Let me update my working memory and give you a clear picture:
+
+Your deployments are failing because of recent commits that broke your build process.
+You have a chain of 5 failed deployments, all from today. Here's what happened:
+
+The Problem (In Order)
+1. Latest Failure (20:41) — Corepack Signature Verification
+
+Someone changed package.json to use pnpm@10.26.1
+nixpacks.toml runs corepack pnpm install --frozen-lockfile --prod=false
+Build fails with: Cannot find matching keyid — corepack can't verify the pnpm package signature
+Fix: Add environment variable COREPACK_INTEGRITY_KEYS = 0 to disable signature checking
+2. Previous Failure (20:32) — NPM Exit Handler Crash
+
+nixpacks.toml install cmd was changed to: npx --yes npm@10.8.3 ci --include=dev --no-audit --no-fund
+This triggers a known npm internal bug: Exit handler never called!
+Fix: Revert nixpacks.toml install to simple npm ci --include=dev
+3. Even Earlier (20:26+) — The Original Health Check Timeout
+
+This is what PR #1 addresses (moving health endpoint before setupAuth)
+What You Need to Do RIGHT NOW
+You have two options:
+
+Option A: Quick Fix (Recommended) Revert the recent commits that changed the build config. Go back to the last commit that successfully built, then carefully re-apply only the health check fix from PR #1.
+
+Option B: Fix in Place
+
+Remove pnpm, go back to npm:
+
+Edit package.json → remove "packageManager": "pnpm@10.26.1" (if it's there)
+Make sure package-lock.json is in the repo (not pnpm-lock.yaml)
+Fix nixpacks.toml:
+
+[phases.install]
+cmds = ["npm ci --include=dev"]
+
+(Remove the npx --yes npm@10.8.3 wrapper)
+
+Add the corepack workaround variable (as a temporary measure if you're keeping pnpm):
+
+In Railway dashboard, add variable: COREPACK_INTEGRITY_KEYS = 0
+Merge PR #1 to fix the health check timeout
+
+Push to main and watch the build.
