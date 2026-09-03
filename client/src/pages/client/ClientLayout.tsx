@@ -66,7 +66,7 @@ export default function ClientLayout({ children, title }: ClientLayoutProps) {
     <div className="min-h-screen flex bg-muted/30">
       <aside className="w-64 bg-card border-r flex flex-col shadow-sm">
         <div className="p-4 border-b bg-gradient-to-r from-primary/10 to-transparent">
-          <Link href="/">
+          <Link href="/?view=site">
             <Button variant="ghost" size="sm" className="mb-2 hover-elevate">
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back to Site
