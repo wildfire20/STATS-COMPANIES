@@ -8,4 +8,4 @@ cmds = ["pnpm install --frozen-lockfile --prod=false"]
 cmds = ["pnpm run build"]
 
 [start]
-cmd = "node dist/index.cjs"
+cmd = "node --enable-source-maps dist/index.cjs"

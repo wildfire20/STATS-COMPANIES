@@ -1,1 +1,1 @@
-web: node dist/index.cjs
+web: node --enable-source-maps dist/index.cjs
