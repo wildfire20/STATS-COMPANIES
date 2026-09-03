@@ -32,6 +32,7 @@ export default function ClientProfile() {
     phone: "",
     marketingOptIn: false,
   });
+  const phoneIsValid = formData.phone.trim().length >= 10 && formData.phone.trim().length <= 30;
 
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<UserType>) => {
@@ -47,10 +48,10 @@ export default function ClientProfile() {
       });
       setIsEditing(false);
     },
-    onError: () => {
+    onError: async (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to update profile. Please try again.",
+        description: error.message || "Failed to update profile. Please try again.",
         variant: "destructive",
       });
     },
@@ -67,6 +68,10 @@ export default function ClientProfile() {
   };
 
   const handleSave = () => {
+    if (!phoneIsValid) {
+      toast({ title: "Valid phone number required", description: "Enter a phone number between 10 and 30 characters.", variant: "destructive" });
+      return;
+    }
     updateMutation.mutate(formData);
   };
 
@@ -179,7 +184,7 @@ export default function ClientProfile() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">Phone Number *</Label>
               {isEditing ? (
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -189,8 +194,12 @@ export default function ClientProfile() {
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="+27 12 345 6789"
                     className="pl-10"
+                    required
+                    minLength={10}
+                    maxLength={30}
                     data-testid="input-phone"
                   />
+                  {!phoneIsValid && <p className="mt-1 text-xs text-destructive">A phone number between 10 and 30 characters is required.</p>}
                 </div>
               ) : (
                 <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
@@ -204,7 +213,7 @@ export default function ClientProfile() {
               <div className="flex gap-3 pt-4">
                 <Button 
                   onClick={handleSave} 
-                  disabled={updateMutation.isPending}
+                  disabled={updateMutation.isPending || !phoneIsValid}
                   className="hover-elevate"
                 >
                   <Save className="h-4 w-4 mr-2" />
@@ -246,7 +255,7 @@ export default function ClientProfile() {
                   if (isEditing) {
                     setFormData({ ...formData, marketingOptIn: checked });
                   } else {
-                    updateMutation.mutate({ marketingOptIn: checked });
+                    updateMutation.mutate({ phone: user?.phone || "", marketingOptIn: checked });
                   }
                 }}
                 data-testid="switch-marketing"

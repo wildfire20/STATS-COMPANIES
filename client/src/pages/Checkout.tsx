@@ -20,7 +20,7 @@ import {
   Package, Plus, Zap
 } from "lucide-react";
 import { motion } from "framer-motion";
-import type { Address } from "@shared/schema";
+import type { Address, User } from "@shared/schema";
 
 interface PaymentMethod {
   id: string;
@@ -58,6 +58,11 @@ export default function Checkout() {
     queryKey: ["/api/client/addresses"],
     enabled: userLoaded && !!isSignedIn,
   });
+  const { data: profile, isLoading: profileLoading } = useQuery<User>({
+    queryKey: ["/api/client/profile"],
+    enabled: userLoaded && !!isSignedIn,
+  });
+  const hasValidSavedPhone = !!profile?.phone?.trim() && profile.phone.trim().length >= 10 && profile.phone.trim().length <= 30;
 
   const { data: paymentMethods, isLoading: paymentMethodsLoading } = useQuery<PaymentMethod[]>({
     queryKey: ["/api/payment-methods"],
@@ -85,6 +90,10 @@ export default function Checkout() {
   }, [items]);
 
   const saveFulfillmentDetails = async () => {
+    if (!hasValidSavedPhone) {
+      toast({ title: "Phone number required", description: "Add a valid phone number to your profile before checking out.", variant: "destructive" });
+      return;
+    }
     if (items.some((item) => !(lineDetails[item.id]?.instructions || "").trim())) {
       toast({ title: "Fulfillment details required", description: "Add instructions for every cart line before continuing.", variant: "destructive" });
       return;
@@ -631,7 +640,7 @@ export default function Checkout() {
                       </Button>
                       <Button 
                         onClick={() => checkoutMutation.mutate()}
-                        disabled={checkoutMutation.isPending}
+                        disabled={checkoutMutation.isPending || !hasValidSavedPhone}
                         className="rounded-full px-8 btn-premium"
                         data-testid="button-place-order"
                       >
@@ -672,6 +681,11 @@ export default function Checkout() {
                     <span className="text-muted-foreground">Items ({itemCount})</span>
                     <span data-testid="text-subtotal">{formatPrice(subtotal)}</span>
                   </div>
+                  {!profileLoading && !hasValidSavedPhone && (
+                    <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                      A valid saved phone number is required to place an order. <Link href="/dashboard/profile" className="font-medium underline">Add your phone number in your profile</Link>.
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">VAT (15%)</span>
                     <span data-testid="text-tax">{formatPrice(tax)}</span>

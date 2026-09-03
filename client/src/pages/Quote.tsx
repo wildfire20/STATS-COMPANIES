@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,12 +14,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { FileText, CheckCircle, Printer, Camera, Video, Megaphone } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
-import type { Promotion, ServicePlan } from "@shared/schema";
+import type { Promotion, ServicePlan, User } from "@shared/schema";
 
 const quoteFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email"),
-  phone: z.string().min(10, "Please enter a valid phone number"),
+  phone: z.string().trim().min(10, "Please enter a valid phone number").max(30, "Phone number is too long"),
   company: z.string().optional(),
   serviceType: z.string().min(1, "Please select a service type"),
   projectDescription: z.string().min(20, "Please provide more details about your project"),
@@ -59,6 +60,7 @@ const timelines = [
 export default function Quote() {
   const { toast } = useToast();
   const [quoteSubmitted, setQuoteSubmitted] = useState(false);
+  const { isLoaded, isSignedIn } = useAuth();
   const selection = new URLSearchParams(window.location.search);
   const sourceType = selection.get("sourceType");
   const sourceId = selection.get("sourceId");
@@ -91,6 +93,18 @@ export default function Quote() {
       timeline: "",
     },
   });
+  const { data: profile } = useQuery<User>({ queryKey: ["/api/client/profile"], enabled: isLoaded && !!isSignedIn });
+  useEffect(() => {
+    if (!profile) return;
+    const values = {
+      name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim(),
+      email: profile.email || "",
+      phone: profile.phone || "",
+    };
+    (Object.entries(values) as [keyof typeof values, string][]).forEach(([field, value]) => {
+      if (value && !form.getFieldState(field).isDirty) form.setValue(field, value);
+    });
+  }, [profile, form]);
 
   const quoteMutation = useMutation({
     mutationFn: async (data: QuoteFormData) => {

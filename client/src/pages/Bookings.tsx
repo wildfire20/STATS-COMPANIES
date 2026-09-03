@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,12 +16,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarIcon, Clock, Camera, Video, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { User } from "@shared/schema";
 
 const bookingFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email"),
-  phone: z.string().min(10, "Please enter a valid phone number"),
+  phone: z.string().trim().min(10, "Please enter a valid phone number").max(30, "Phone number is too long"),
   serviceName: z.string().min(1, "Please select a service"),
   date: z.string().min(1, "Please select a date"),
   time: z.string().min(1, "Please select a time"),
@@ -46,6 +48,7 @@ export default function Bookings() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [bookingComplete, setBookingComplete] = useState(false);
+  const { isLoaded, isSignedIn } = useAuth();
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -59,6 +62,15 @@ export default function Bookings() {
       notes: "",
     },
   });
+  const { data: profile } = useQuery<User>({ queryKey: ["/api/client/profile"], enabled: isLoaded && !!isSignedIn });
+  useEffect(() => {
+    if (!profile) return;
+    const name = `${profile.firstName || ""} ${profile.lastName || ""}`.trim();
+    const values = { name, email: profile.email || "", phone: profile.phone || "" };
+    (Object.entries(values) as [keyof typeof values, string][]).forEach(([field, value]) => {
+      if (value && !form.getFieldState(field).isDirty) form.setValue(field, value);
+    });
+  }, [profile, form]);
 
   const bookingMutation = useMutation({
     mutationFn: async (data: BookingFormData) => {
@@ -66,10 +78,12 @@ export default function Bookings() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/client/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/client/stats"] });
       setBookingComplete(true);
       toast({
-        title: "Booking Confirmed",
-        description: "We'll contact you shortly to confirm your appointment.",
+        title: "Booking Request Submitted",
+        description: "Your request is pending review. We'll contact you shortly.",
       });
     },
     onError: () => {
@@ -100,9 +114,9 @@ export default function Bookings() {
             <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Booking Confirmed!</h2>
+            <h2 className="text-2xl font-bold mb-2">Booking Request Submitted!</h2>
             <p className="text-muted-foreground mb-4">
-              Thank you for your booking. We'll contact you shortly to confirm your appointment details.
+              Thank you for your booking request. It is pending review, and we'll contact you shortly.
             </p>
             <Button onClick={() => setBookingComplete(false)} data-testid="button-new-booking">
               Make Another Booking
@@ -304,7 +318,7 @@ export default function Bookings() {
                       disabled={bookingMutation.isPending}
                       data-testid="button-submit-booking"
                     >
-                      {bookingMutation.isPending ? "Processing..." : "Confirm Booking"}
+                       {bookingMutation.isPending ? "Processing..." : "Submit Booking Request"}
                     </Button>
                   </div>
                 </div>

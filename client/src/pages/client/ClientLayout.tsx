@@ -9,7 +9,6 @@ import {
   LayoutDashboard, 
   ShoppingCart, 
   Calendar, 
-  FileText, 
   User, 
   MapPin,
   Bell,
@@ -22,7 +21,6 @@ const clientNavItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/orders", label: "My Orders", icon: ShoppingCart },
   { href: "/dashboard/bookings", label: "Bookings", icon: Calendar },
-  { href: "/dashboard/invoices", label: "Invoices", icon: FileText },
   { href: "/dashboard/addresses", label: "Addresses", icon: MapPin },
   { href: "/dashboard/profile", label: "Profile", icon: User },
 ];

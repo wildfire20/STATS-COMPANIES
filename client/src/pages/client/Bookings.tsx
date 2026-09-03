@@ -15,6 +15,7 @@ import {
   Mail
 } from "lucide-react";
 import type { Booking } from "@shared/schema";
+import { bookingDateTimeKey, bookingDay, bookingMonthShort, companyNowBookingKey, formatBookingDate, isBookingToday } from "@shared/bookingDateTime";
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -31,11 +32,11 @@ export default function ClientBookings() {
     queryKey: ["/api/client/bookings"],
   });
 
-  const upcomingBookings = bookings.filter(b => 
-    ['pending', 'confirmed'].includes(b.status) && new Date(b.date) >= new Date()
-  );
-  const pastBookings = bookings.filter(b => 
-    b.status === 'completed' || new Date(b.date) < new Date()
+  const nowKey = companyNowBookingKey();
+  const pendingBookings = bookings.filter(b => b.status === "pending");
+  const upcomingBookings = bookings.filter(b => b.status === "confirmed" && bookingDateTimeKey(b.date, b.time) >= nowKey);
+  const pastBookings = bookings.filter(b =>
+    b.status === "completed" || b.status === "cancelled" || (b.status === "confirmed" && bookingDateTimeKey(b.date, b.time) < nowKey)
   );
 
   if (isLoading) {
@@ -77,8 +78,11 @@ export default function ClientBookings() {
           </Link>
         </div>
 
-        <Tabs defaultValue="upcoming">
+        <Tabs defaultValue="pending">
           <TabsList>
+            <TabsTrigger value="pending">
+              Pending ({pendingBookings.length})
+            </TabsTrigger>
             <TabsTrigger value="upcoming">
               Upcoming ({upcomingBookings.length})
             </TabsTrigger>
@@ -90,6 +94,11 @@ export default function ClientBookings() {
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="pending" className="mt-4">
+            {pendingBookings.length === 0 ? (
+              <EmptyBookings title="No pending booking requests" description="Booking requests awaiting review will appear here." />
+            ) : <div className="space-y-4">{pendingBookings.map((booking) => <BookingCard key={booking.id} booking={booking} />)}</div>}
+          </TabsContent>
           <TabsContent value="upcoming" className="mt-4">
             {upcomingBookings.length === 0 ? (
               <Card>
@@ -161,9 +170,16 @@ export default function ClientBookings() {
   );
 }
 
+function EmptyBookings({ title, description }: { title: string; description: string }) {
+  return <Card><CardContent className="py-12 text-center">
+    <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+    <h3 className="font-semibold text-lg mb-2">{title}</h3>
+    <p className="text-muted-foreground">{description}</p>
+  </CardContent></Card>;
+}
+
 function BookingCard({ booking, isPast = false }: { booking: Booking; isPast?: boolean }) {
-  const bookingDate = new Date(booking.date);
-  const isToday = bookingDate.toDateString() === new Date().toDateString();
+  const isToday = isBookingToday(booking.date);
 
   return (
     <Card className={`hover-elevate transition-all ${isPast ? 'opacity-75' : ''}`}>
@@ -176,10 +192,10 @@ function BookingCard({ booking, isPast = false }: { booking: Booking; isPast?: b
           }`}>
             <div className="text-center">
               <div className={`text-xl font-bold ${isToday ? '' : 'text-primary'}`}>
-                {bookingDate.getDate()}
+                {bookingDay(booking.date)}
               </div>
               <div className={`text-xs uppercase ${isToday ? '' : 'text-primary'}`}>
-                {bookingDate.toLocaleString('default', { month: 'short' })}
+                {bookingMonthShort(booking.date)}
               </div>
             </div>
           </div>
@@ -193,7 +209,7 @@ function BookingCard({ booking, isPast = false }: { booking: Booking; isPast?: b
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                <span>{bookingDate.toLocaleDateString()}</span>
+                <span>{formatBookingDate(booking.date)}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />

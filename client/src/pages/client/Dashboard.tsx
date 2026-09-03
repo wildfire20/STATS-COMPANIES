@@ -9,21 +9,19 @@ import {
   ShoppingCart, 
   Calendar, 
   FileText, 
-  DollarSign,
   Package,
   Clock,
   ArrowRight,
   TrendingUp
 } from "lucide-react";
 import type { Order, Booking } from "@shared/schema";
+import { bookingDateTimeKey, companyNowBookingKey } from "@shared/bookingDateTime";
 
 interface ClientStats {
   totalOrders: number;
   pendingOrders: number;
-  totalSpent: number;
-  totalBookings: number;
   upcomingBookings: number;
-  totalInvoices: number;
+  pendingBookingRequests: number;
   unreadNotifications: number;
 }
 
@@ -54,16 +52,17 @@ export default function ClientDashboard() {
   });
 
   const recentOrders = orders.slice(0, 3);
+  const nowKey = companyNowBookingKey();
   const upcomingBookings = bookings
-    .filter(b => b.status === 'confirmed' || b.status === 'pending')
+    .filter(b => b.status === "confirmed" && bookingDateTimeKey(b.date, b.time) >= nowKey)
     .slice(0, 3);
 
   return (
     <ClientLayout title="Dashboard">
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {statsLoading ? (
-            Array(4).fill(0).map((_, i) => (
+            Array(3).fill(0).map((_, i) => (
               <Card key={i}>
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                   <Skeleton className="h-4 w-24" />
@@ -76,21 +75,6 @@ export default function ClientDashboard() {
             ))
           ) : (
             <>
-              <Card className="hover-elevate transition-all">
-                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-primary" data-testid="text-total-spent">
-                    R{stats?.totalSpent?.toLocaleString() || "0"}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Lifetime purchases
-                  </p>
-                </CardContent>
-              </Card>
-
               <Card className="hover-elevate transition-all">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">My Orders</CardTitle>
@@ -108,12 +92,12 @@ export default function ClientDashboard() {
 
               <Card className="hover-elevate transition-all">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Bookings</CardTitle>
+                  <CardTitle className="text-sm font-medium">Upcoming Bookings</CardTitle>
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-total-bookings">
-                    {stats?.totalBookings || 0}
+                  <div className="text-2xl font-bold" data-testid="text-upcoming-bookings">
+                    {stats?.upcomingBookings || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {stats?.upcomingBookings || 0} upcoming
@@ -123,15 +107,15 @@ export default function ClientDashboard() {
 
               <Card className="hover-elevate transition-all">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Invoices</CardTitle>
+                  <CardTitle className="text-sm font-medium">Pending Booking Requests</CardTitle>
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-total-invoices">
-                    {stats?.totalInvoices || 0}
+                  <div className="text-2xl font-bold" data-testid="text-pending-booking-requests">
+                    {stats?.pendingBookingRequests || 0}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Total documents
+                    Awaiting review
                   </p>
                 </CardContent>
               </Card>

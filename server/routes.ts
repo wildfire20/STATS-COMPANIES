@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { getClerkIdentity, isAuthenticated, isAdmin, resolveOptionalDbUser } from "./clerkAuth";
 import { ObjectStorageService, ObjectNotFoundError, objectStorageClient } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
+import { bookingDateTimeKey, companyNowBookingKey } from "@shared/bookingDateTime";
 import { 
   insertBookingSchema, 
   insertQuoteRequestSchema, 
@@ -543,7 +544,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/bookings", async (req, res) => {
     try {
       const data = insertBookingSchema.parse(req.body);
-      const booking = await storage.createBooking(data);
+      const phone = data.phone?.trim();
+      if (!phone || phone.length < 10 || phone.length > 30) {
+        return res.status(400).json({ error: "A valid phone number between 10 and 30 characters is required" });
+      }
+      const dbUser = await resolveOptionalDbUser(req);
+      const booking = await storage.createBooking({ ...data, phone, userId: dbUser?.id ?? null });
       res.status(201).json(booking);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -565,6 +571,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/quotes", async (req, res) => {
     try {
       const data = insertQuoteRequestSchema.parse(req.body);
+      const phone = data.phone?.trim();
+      if (!phone || phone.length < 10 || phone.length > 30) {
+        return res.status(400).json({ error: "A valid phone number between 10 and 30 characters is required" });
+      }
       const source = z.object({
         sourceType: z.enum(["promotion", "marketing_plan"]).optional(),
         sourceId: z.string().uuid().optional(),
@@ -583,7 +593,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (!plan || !plan.isActive) return res.status(400).json({ error: "The selected marketing plan is no longer available" });
         sourceName = plan.name;
       }
-      const quote = await storage.createQuoteRequest({ ...data, sourceType: source.sourceType, sourceId: source.sourceId, sourceName });
+      const quote = await storage.createQuoteRequest({ ...data, phone, sourceType: source.sourceType, sourceId: source.sourceId, sourceName });
       res.status(201).json(quote);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1375,24 +1385,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const [orders, bookings, invoices, notifications] = await Promise.all([
+      const [orders, bookings, notifications] = await Promise.all([
         storage.getOrdersByUser(userId),
         storage.getBookingsByUser(userId),
-        storage.getInvoicesByUser(userId),
         storage.getUnreadNotifications(userId),
       ]);
 
-      const totalSpent = orders.reduce((sum, order) => sum + parseFloat(order.total), 0);
       const pendingOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'completed').length;
-      const upcomingBookings = bookings.filter(b => b.status === 'confirmed' && new Date(b.date) > new Date()).length;
+      const nowKey = companyNowBookingKey();
+      const upcomingBookings = bookings.filter(b => b.status === "confirmed" && bookingDateTimeKey(b.date, b.time) >= nowKey).length;
+      const pendingBookingRequests = bookings.filter(b => b.status === "pending").length;
 
       res.json({
         totalOrders: orders.length,
         pendingOrders,
-        totalSpent,
-        totalBookings: bookings.length,
         upcomingBookings,
-        totalInvoices: invoices.length,
+        pendingBookingRequests,
         unreadNotifications: notifications.length,
       });
     } catch (error) {
@@ -1437,8 +1445,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const { phone, marketingOptIn } = req.body;
+      const trimmedPhone = typeof phone === "string" ? phone.trim() : "";
+      if (!trimmedPhone || trimmedPhone.length < 10 || trimmedPhone.length > 30) {
+        return res.status(400).json({ error: "Phone number is required and must be between 10 and 30 characters" });
+      }
+      if (typeof marketingOptIn !== "boolean") {
+        return res.status(400).json({ error: "Marketing preference must be a boolean" });
+      }
       const user = await storage.updateUserProfile(userId, {
-        phone,
+        phone: trimmedPhone,
         marketingOptIn,
       });
 
@@ -1456,6 +1471,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         username: identity.username,
       });
     } catch (error) {
+      if ((error as any)?.code === "23505") {
+        return res.status(409).json({ error: "This phone number is already associated with another account" });
+      }
       console.error("Error updating profile:", error);
       res.status(500).json({ error: "Failed to update profile" });
     }
@@ -1612,15 +1630,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "Order not found" });
       }
 
-      const [statusHistory, invoices] = await Promise.all([
-        storage.getOrderStatusHistory(order.id),
-        storage.getInvoicesByOrder(order.id),
-      ]);
+      const statusHistory = await storage.getOrderStatusHistory(order.id);
 
       res.json({
         ...order,
         statusHistory,
-        invoices,
       });
     } catch (error) {
       console.error("Error fetching order:", error);
@@ -1904,6 +1918,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const total = subtotal + tax;
 
       const user = await storage.getUser(userId);
+      const savedPhone = user?.phone?.trim();
+      if (!savedPhone || savedPhone.length < 10 || savedPhone.length > 30) {
+        return res.status(400).json({ error: "Add a valid phone number to your profile before placing an order" });
+      }
       const address = addressId ? await storage.getAddress(addressId) : null;
       if (addressId && (!address || address.userId !== userId)) {
         return res.status(400).json({ error: "Please select one of your saved delivery addresses" });
@@ -1941,7 +1959,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         deliveryAddress,
         customerName,
         customerEmail,
-        customerPhone: user?.phone || undefined,
+        customerPhone: savedPhone,
       });
 
       await storage.addOrderStatusHistory({

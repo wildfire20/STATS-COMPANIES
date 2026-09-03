@@ -42,7 +42,6 @@ import DemoAccountsManagement from "@/pages/admin/DemoAccountsManagement";
 import ClientDashboard from "@/pages/client/Dashboard";
 import ClientOrders from "@/pages/client/Orders";
 import ClientBookings from "@/pages/client/Bookings";
-import ClientInvoices from "@/pages/client/Invoices";
 import ClientProfile from "@/pages/client/Profile";
 import ClientAddresses from "@/pages/client/Addresses";
 
@@ -79,7 +78,7 @@ function Router() {
   return <Switch>
     <Route path="/" component={HomeRedirect} /><Route path="/about" component={About} /><Route path="/shop" component={Shop} /><Route path="/services" component={Services} /><Route path="/portfolio" component={Portfolio} /><Route path="/bookings" component={Bookings} /><Route path="/quote" component={Quote} /><Route path="/promotions" component={Promotions} /><Route path="/equipment" component={EquipmentRental} /><Route path="/cart" component={Cart} /><Route path="/checkout" component={Checkout} />
     <Route path="/admin" component={AdminDashboard} /><Route path="/admin/services" component={ServicesManagement} /><Route path="/admin/plans" component={ServicePlansManagement} /><Route path="/admin/products" component={ProductsManagement} /><Route path="/admin/promotions" component={PromotionsManagement} /><Route path="/admin/orders" component={OrdersManagement} /><Route path="/admin/bookings" component={BookingsManagement} /><Route path="/admin/quotes" component={QuotesManagement} /><Route path="/admin/portfolio" component={PortfolioManagement} /><Route path="/admin/testimonials" component={TestimonialsManagement} /><Route path="/admin/team" component={TeamManagement} /><Route path="/admin/payments" component={PaymentSettingsManagement} /><Route path="/admin/contact" component={ContactSettingsManagement} /><Route path="/admin/equipment" component={EquipmentManagement} /><Route path="/admin/demo-accounts" component={DemoAccountsManagement} />
-    <Route path="/dashboard" component={ClientDashboard} /><Route path="/dashboard/orders/:id" component={ClientOrders} /><Route path="/dashboard/orders" component={ClientOrders} /><Route path="/dashboard/bookings" component={ClientBookings} /><Route path="/dashboard/invoices" component={ClientInvoices} /><Route path="/dashboard/profile" component={ClientProfile} /><Route path="/dashboard/addresses" component={ClientAddresses} /><Route component={NotFound} />
+    <Route path="/dashboard" component={ClientDashboard} /><Route path="/dashboard/orders/:id" component={ClientOrders} /><Route path="/dashboard/orders" component={ClientOrders} /><Route path="/dashboard/bookings" component={ClientBookings} /><Route path="/dashboard/profile" component={ClientProfile} /><Route path="/dashboard/addresses" component={ClientAddresses} /><Route component={NotFound} />
   </Switch>;
 }
 function MainLayout({ children }: { children: React.ReactNode }) { return <div className="min-h-screen flex flex-col"><Header /><main className="flex-1">{children}</main><Footer /></div>; }

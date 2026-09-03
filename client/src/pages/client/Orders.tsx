@@ -154,7 +154,7 @@ function OrdersList() {
 }
 
 function OrderDetails({ orderId }: { orderId: string }) {
-  const { data: order, isLoading } = useQuery<Order & { statusHistory?: any[]; invoices?: any[] }>({
+  const { data: order, isLoading } = useQuery<Order & { statusHistory?: any[] }>({
     queryKey: ["/api/client/orders", orderId],
   });
 
@@ -356,25 +356,6 @@ function OrderDetails({ orderId }: { orderId: string }) {
             </CardContent>
           </Card>
 
-          {order.invoices && order.invoices.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Invoices</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {order.invoices.map((invoice: any) => (
-                    <div key={invoice.id} className="flex items-center justify-between p-2 rounded border">
-                      <span className="text-sm font-medium">{invoice.invoiceNumber}</span>
-                      <Button variant="ghost" size="sm" className="hover-elevate">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
