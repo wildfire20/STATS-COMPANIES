@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
 import { getClerkIdentity, isAuthenticated, isAdmin, resolveOptionalDbUser } from "./clerkAuth";
-import { ObjectStorageService, ObjectNotFoundError, objectStorageClient } from "./objectStorage";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { ObjectPermission } from "./objectAcl";
 import { bookingDateTimeKey, companyNowBookingKey } from "@shared/bookingDateTime";
 import { 
@@ -153,6 +153,7 @@ function calculateProductUnitPrice(product: { basePrice: string; options: any },
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<void> {
+  const objectStorage = new ObjectStorageService();
   // Health check endpoint for Railway
   app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -170,31 +171,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: 'No image file provided' });
       }
 
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (!bucketId) {
-        return res.status(500).json({ error: 'Object storage not configured' });
-      }
-
       const fileExtension = req.file.originalname.split('.').pop() || 'jpg';
       const fileName = `${randomUUID()}.${fileExtension}`;
       const objectPath = `public/uploads/${fileName}`;
 
-      const bucket = objectStorageClient.bucket(bucketId);
-      const file = bucket.file(objectPath);
-
+      const file = objectStorage.getObject(objectPath);
       await file.save(req.file.buffer, {
         contentType: req.file.mimetype,
         metadata: {
-          contentType: req.file.mimetype,
-        },
-      });
-
-      await file.setMetadata({
-        metadata: {
-          'custom:aclPolicy': JSON.stringify({
-            owner: 'admin',
-            visibility: 'public',
-          }),
+          "acl-policy": JSON.stringify({ owner: "admin", visibility: "public" }),
         },
       });
 
@@ -209,20 +194,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Serve uploaded images
   app.get('/api/images/:fileName', async (req, res) => {
     try {
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (!bucketId) {
-        return res.status(500).json({ error: 'Object storage not configured' });
-      }
+      const file = objectStorage.getObject(`public/uploads/${req.params.fileName}`);
 
-      const bucket = objectStorageClient.bucket(bucketId);
-      const file = bucket.file(`public/uploads/${req.params.fileName}`);
-
-      const [exists] = await file.exists();
+      const exists = await file.exists();
       if (!exists) {
         return res.status(404).json({ error: 'Image not found' });
       }
 
-      const [metadata] = await file.getMetadata();
+      const metadata = await file.getMetadata();
       res.set({
         'Content-Type': metadata.contentType || 'image/jpeg',
         'Cache-Control': 'public, max-age=31536000',
@@ -239,16 +218,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/artwork", isAuthenticated, artworkUpload.single("artwork"), async (req: any, res) => {
     try {
       if (!req.file) return res.status(400).json({ error: "An artwork file is required" });
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
       const extension = req.file.originalname.split(".").pop()!.toLowerCase();
       const fileId = `${randomUUID()}.${extension}`;
       const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._ -]/g, "_").slice(0, 120);
-      const file = objectStorageClient.bucket(bucketId).file(`private/artwork/${fileId}`);
+      const file = objectStorage.getObject(`private/artwork/${fileId}`);
       await file.save(req.file.buffer, {
-        resumable: false,
         contentType: req.file.mimetype,
-        metadata: { contentType: req.file.mimetype, metadata: { "custom:owner": req.dbUser!.id, "custom:originalName": safeName } },
+        metadata: { owner: req.dbUser!.id, "original-name": safeName },
       });
       res.status(201).json({ url: `/api/artwork/${fileId}`, name: safeName });
     } catch (error) {
@@ -260,15 +236,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/artwork/:fileId", isAuthenticated, async (req: any, res) => {
     try {
       if (!/^[0-9a-f-]{36}\.[a-z0-9]+$/i.test(req.params.fileId)) return res.status(404).json({ error: "Artwork not found" });
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
-      const file = objectStorageClient.bucket(bucketId).file(`private/artwork/${req.params.fileId}`);
-      const [exists] = await file.exists();
+      const file = objectStorage.getObject(`private/artwork/${req.params.fileId}`);
+      const exists = await file.exists();
       if (!exists) return res.status(404).json({ error: "Artwork not found" });
-      const [metadata] = await file.getMetadata();
-      const owner = metadata.metadata?.["custom:owner"];
+      const metadata = await file.getMetadata();
+      const owner = metadata.customMetadata.owner ?? metadata.customMetadata["custom:owner"];
       if (req.dbUser!.role !== "admin" && owner !== req.dbUser!.id) return res.status(403).json({ error: "Not authorized to download this artwork" });
-      const safeName = String(metadata.metadata?.["custom:originalName"] || req.params.fileId).replace(/["\r\n]/g, "_");
+      const safeName = String(metadata.customMetadata["original-name"] ?? metadata.customMetadata["custom:originalName"] ?? req.params.fileId).replace(/["\r\n]/g, "_");
       res.set({ "Content-Type": metadata.contentType || "application/octet-stream", "Content-Disposition": `attachment; filename="${safeName}"`, "Cache-Control": "private, no-store" });
       file.createReadStream().pipe(res);
     } catch (error) {
@@ -284,31 +258,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: 'No video file provided' });
       }
 
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (!bucketId) {
-        return res.status(500).json({ error: 'Object storage not configured' });
-      }
-
       const fileExtension = req.file.originalname.split('.').pop() || 'mp4';
       const fileName = `${randomUUID()}.${fileExtension}`;
       const objectPath = `public/videos/${fileName}`;
 
-      const bucket = objectStorageClient.bucket(bucketId);
-      const file = bucket.file(objectPath);
-
+      const file = objectStorage.getObject(objectPath);
       await file.save(req.file.buffer, {
         contentType: req.file.mimetype,
         metadata: {
-          contentType: req.file.mimetype,
-        },
-      });
-
-      await file.setMetadata({
-        metadata: {
-          'custom:aclPolicy': JSON.stringify({
-            owner: 'admin',
-            visibility: 'public',
-          }),
+          "acl-policy": JSON.stringify({ owner: "admin", visibility: "public" }),
         },
       });
 
@@ -323,20 +281,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Serve uploaded videos
   app.get('/api/videos/:fileName', async (req, res) => {
     try {
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-      if (!bucketId) {
-        return res.status(500).json({ error: 'Object storage not configured' });
-      }
+      const file = objectStorage.getObject(`public/videos/${req.params.fileName}`);
 
-      const bucket = objectStorageClient.bucket(bucketId);
-      const file = bucket.file(`public/videos/${req.params.fileName}`);
-
-      const [exists] = await file.exists();
+      const exists = await file.exists();
       if (!exists) {
         return res.status(404).json({ error: 'Video not found' });
       }
 
-      const [metadata] = await file.getMetadata();
+      const metadata = await file.getMetadata();
       const contentType = metadata.contentType || 'video/mp4';
       const fileSize = Number(metadata.size) || 0;
 
@@ -1821,11 +1773,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: "Invalid artwork file" });
       }
       if (artworkUrl) {
-        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
         const fileId = artworkUrl.split("/").pop()!;
-        if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
-        const [metadata] = await objectStorageClient.bucket(bucketId).file(`private/artwork/${fileId}`).getMetadata();
-        if (metadata.metadata?.["custom:owner"] !== userId) return res.status(403).json({ error: "You can only attach your own artwork" });
+        const metadata = await objectStorage.getObject(`private/artwork/${fileId}`).getMetadata();
+        const owner = metadata.customMetadata.owner ?? metadata.customMetadata["custom:owner"];
+        if (owner !== userId) return res.status(403).json({ error: "You can only attach your own artwork" });
       }
       if (artworkName !== undefined && artworkName !== null && (typeof artworkName !== "string" || artworkName.length > 120)) {
         return res.status(400).json({ error: "Invalid artwork filename" });
