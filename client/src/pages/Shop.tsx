@@ -28,7 +28,7 @@ export default function Shop() {
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const { addItem } = useCart();
 
-  const { data: products, isLoading } = useQuery<Product[]>({
+  const { data: products, isLoading, isError } = useQuery<Product[]>({
     queryKey: [selectedCategory !== "all" ? `/api/products?category=${selectedCategory}` : "/api/products"],
   });
 
@@ -78,11 +78,11 @@ export default function Shop() {
               Shop
             </Badge>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-6 leading-tight" data-testid="text-shop-title">
-              Digital Printing
-              <span className="block text-gradient-light">Products</span>
+              Shop
+              <span className="block text-gradient-light">Digital Printing Products</span>
             </h1>
             <p className="text-lg md:text-xl text-white/70 max-w-2xl leading-relaxed">
-              Browse our range of high-quality printing products. Customize, upload your artwork, and order online.
+              Browse high-quality digital printing products from STATS Companies in Pretoria, South Africa. Customize, upload your artwork, and order online.
             </p>
           </motion.div>
         </div>
@@ -133,10 +133,26 @@ export default function Shop() {
       <section className="py-12 md:py-20 bg-muted/30">
         <div className="container mx-auto px-4">
           {isLoading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array(8).fill(0).map((_, i) => (
-                <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
-              ))}
+            <div>
+              <div className="mb-8 text-center">
+                <h2 className="text-2xl font-display font-semibold mb-2">Loading our product catalogue</h2>
+                <p className="text-muted-foreground">
+                  Our Pretoria printing products will appear here shortly.
+                </p>
+              </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" aria-hidden="true">
+                {Array(8).fill(0).map((_, i) => (
+                  <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />
+                ))}
+              </div>
+            </div>
+          ) : isError ? (
+            <div className="text-center py-16">
+              <Package className="h-10 w-10 text-muted-foreground/50 mx-auto mb-6" />
+              <h2 className="text-2xl font-display font-semibold mb-3">Shop STATS Companies products</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Our printing catalogue is temporarily unavailable. Please try again shortly, or request a custom quote for printing, apparel, and corporate gifts in Pretoria.
+              </p>
             </div>
           ) : filteredProducts && filteredProducts.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
