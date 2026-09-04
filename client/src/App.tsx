@@ -22,6 +22,8 @@ import Promotions from "@/pages/Promotions";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import EquipmentRental from "@/pages/EquipmentRental";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
 import NotFound from "@/pages/not-found";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import ServicesManagement from "@/pages/admin/ServicesManagement";
@@ -67,7 +69,7 @@ function ClerkQueryClientCacheInvalidator() {
 }
 function Router() {
   return <Switch>
-    <Route path="/" component={HomeRedirect} /><Route path="/about" component={About} /><Route path="/shop" component={Shop} /><Route path="/services" component={Services} /><Route path="/portfolio" component={Portfolio} /><Route path="/bookings" component={Bookings} /><Route path="/quote" component={Quote} /><Route path="/promotions" component={Promotions} /><Route path="/equipment" component={EquipmentRental} /><Route path="/cart" component={Cart} /><Route path="/checkout" component={Checkout} />
+    <Route path="/" component={HomeRedirect} /><Route path="/about" component={About} /><Route path="/shop" component={Shop} /><Route path="/services" component={Services} /><Route path="/portfolio" component={Portfolio} /><Route path="/bookings" component={Bookings} /><Route path="/quote" component={Quote} /><Route path="/promotions" component={Promotions} /><Route path="/equipment" component={EquipmentRental} /><Route path="/cart" component={Cart} /><Route path="/checkout" component={Checkout} /><Route path="/privacy-policy" component={PrivacyPolicy} /><Route path="/terms-of-service" component={TermsOfService} />
     <Route path="/admin" component={AdminDashboard} /><Route path="/admin/services" component={ServicesManagement} /><Route path="/admin/plans" component={ServicePlansManagement} /><Route path="/admin/products" component={ProductsManagement} /><Route path="/admin/promotions" component={PromotionsManagement} /><Route path="/admin/orders" component={OrdersManagement} /><Route path="/admin/bookings" component={BookingsManagement} /><Route path="/admin/quotes" component={QuotesManagement} /><Route path="/admin/portfolio" component={PortfolioManagement} /><Route path="/admin/testimonials" component={TestimonialsManagement} /><Route path="/admin/team" component={TeamManagement} /><Route path="/admin/payments" component={PaymentSettingsManagement} /><Route path="/admin/contact" component={ContactSettingsManagement} /><Route path="/admin/equipment" component={EquipmentManagement} /><Route path="/admin/demo-accounts" component={DemoAccountsManagement} />
     <Route path="/dashboard" component={ClientDashboard} /><Route path="/dashboard/orders/:id" component={ClientOrders} /><Route path="/dashboard/orders" component={ClientOrders} /><Route path="/dashboard/bookings" component={ClientBookings} /><Route path="/dashboard/profile" component={ClientProfile} /><Route path="/dashboard/addresses" component={ClientAddresses} /><Route component={NotFound} />
   </Switch>;

@@ -260,8 +260,8 @@ export function Footer() {
               &copy; {new Date().getFullYear()} STATS Companies. All rights reserved.
             </p>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
-              <Link href="/privacy" className="text-white/50 hover:text-white transition-colors">Privacy Policy</Link>
-              <Link href="/terms" className="text-white/50 hover:text-white transition-colors">Terms & Conditions</Link>
+              <Link href="/privacy-policy" className="text-white/50 hover:text-white transition-colors">Privacy Policy</Link>
+              <Link href="/terms-of-service" className="text-white/50 hover:text-white transition-colors">Terms of Service</Link>
               <Link href="/refunds" className="text-white/50 hover:text-white transition-colors">Refund Policy</Link>
             </div>
           </div>
