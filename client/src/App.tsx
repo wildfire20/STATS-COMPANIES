@@ -51,32 +51,6 @@ const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 function stripBase(path: string): string { return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path; }
 if (!clerkPubKey) throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in .env file");
-function SearchMetadata() {
-  useEffect(() => {
-    const id = "stats-organization-schema";
-    document.getElementById(id)?.remove();
-    const script = document.createElement("script");
-    script.id = id;
-    script.type = "application/ld+json";
-    script.text = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "@id": "https://statscompanies.co.za/#organization",
-      name: "STATS Companies",
-      url: "https://statscompanies.co.za/",
-      logo: {
-        "@type": "ImageObject",
-        url: "https://statscompanies.co.za/logo.png",
-        width: 512,
-        height: 512,
-      },
-      image: "https://statscompanies.co.za/logo.png",
-    });
-    document.head.appendChild(script);
-    return () => script.remove();
-  }, []);
-  return null;
-}
 const clerkAppearance = {
   theme: shadcn,
   options: { logoPlacement: "inside" as const, logoLinkUrl: basePath || "/", logoImageUrl: `${window.location.origin}${basePath}/logo.svg` },
@@ -109,5 +83,5 @@ function ClerkProviderWithRoutes() {
   return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: "Welcome back", subtitle: "Sign in to access your account" } }, signUp: { start: { title: "Create your account", subtitle: "Get started today" } } }} routerPush={(to) => setLocation(stripBase(to))} routerReplace={(to) => setLocation(stripBase(to), { replace: true })}><QueryClientProvider client={queryClient}><ClerkQueryClientCacheInvalidator /><TooltipProvider><CartProvider><AppRoutes /><CartDrawer /><WhatsAppButton /><Toaster /></CartProvider></TooltipProvider></QueryClientProvider></ClerkProvider>;
 }
 export default function App() {
-  return <><SearchMetadata /><WouterRouter base={basePath}><ClerkProviderWithRoutes /></WouterRouter></>;
+  return <WouterRouter base={basePath}><ClerkProviderWithRoutes /></WouterRouter>;
 }

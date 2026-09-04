@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useClerk } from "@clerk/react";
 import { useLocalUser } from "@/hooks/useLocalUser";
@@ -14,7 +14,9 @@ import {
   Bell,
   LogOut,
   ChevronLeft,
-  Home
+  Home,
+  Menu,
+  X
 } from "lucide-react";
 
 const clientNavItems = [
@@ -34,6 +36,8 @@ export default function ClientLayout({ children, title }: ClientLayoutProps) {
   const { user, isAuthenticated, isLoading } = useLocalUser();
   const { signOut } = useClerk();
   const [location, setLocation] = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const closeSidebar = () => setSidebarOpen(false);
 
   const { data: unreadCount } = useQuery<number>({
     queryKey: ["/api/client/notifications/unread-count"],
@@ -61,29 +65,51 @@ export default function ClientLayout({ children, title }: ClientLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen flex bg-muted/30">
-      <aside className="w-64 bg-card border-r flex flex-col shadow-sm">
+    <div className="min-h-screen flex bg-muted/30 overflow-x-hidden">
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={closeSidebar}
+          aria-label="Close account navigation"
+        />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-card shadow-sm transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+      }`}>
         <div className="p-4 border-b bg-gradient-to-r from-primary/10 to-transparent">
-          <Link href="/?view=site">
-            <Button variant="ghost" size="sm" className="mb-2 hover-elevate">
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back to Site
+          <div className="flex items-start justify-between gap-2">
+            <Link href="/?view=site" onClick={closeSidebar}>
+              <Button variant="ghost" size="sm" className="mb-2 hover-elevate">
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back to Site
+              </Button>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={closeSidebar}
+              aria-label="Close account menu"
+            >
+              <X className="h-5 w-5" />
             </Button>
-          </Link>
+          </div>
           <h1 className="font-bold text-lg text-primary">My Account</h1>
           <p className="text-sm text-muted-foreground">
             Welcome, {user?.firstName || "Customer"}
           </p>
         </div>
         
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
           {clientNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.href || 
               (item.href !== "/dashboard" && location.startsWith(item.href));
             
             return (
-              <Link key={item.href} href={item.href}>
+              <Link key={item.href} href={item.href} onClick={closeSidebar}>
                 <Button
                   variant={isActive ? "secondary" : "ghost"}
                   className="w-full justify-start"
@@ -98,7 +124,7 @@ export default function ClientLayout({ children, title }: ClientLayoutProps) {
         </nav>
 
         <div className="p-4 border-t space-y-2">
-          <Link href="/">
+          <Link href="/" onClick={closeSidebar}>
             <Button variant="ghost" className="w-full justify-start hover-elevate">
               <Home className="h-4 w-4 mr-2" />
               Go Shopping
@@ -116,9 +142,20 @@ export default function ClientLayout({ children, title }: ClientLayoutProps) {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
+      <main className="min-w-0 w-full flex-1 overflow-auto">
         <header className="bg-card border-b p-4 flex items-center justify-between gap-4 shadow-sm sticky top-0 z-10">
-          <h2 className="text-xl font-semibold">{title}</h2>
+          <div className="flex min-w-0 items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 lg:hidden"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open account menu"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h2 className="truncate text-lg font-semibold sm:text-xl">{title}</h2>
+          </div>
           <div className="flex items-center gap-3">
             <Link href="/dashboard/notifications">
               <Button variant="ghost" size="icon" className="relative hover-elevate">
@@ -145,7 +182,7 @@ export default function ClientLayout({ children, title }: ClientLayoutProps) {
             </div>
           </div>
         </header>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {children}
         </div>
       </main>
