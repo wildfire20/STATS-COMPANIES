@@ -1,4 +1,4 @@
-import { getAuth } from "@clerk/express";
+import { clerkClient, getAuth } from "@clerk/express";
 import type { Request, RequestHandler } from "express";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./db";
@@ -30,6 +30,27 @@ export function getClerkIdentity(req: Request): ClerkIdentity {
   return req.clerkIdentity ?? {};
 }
 
+async function loadVerifiedClerkIdentity(clerkUserId: string): Promise<ClerkIdentity> {
+  const clerkUser = await clerkClient.users.getUser(clerkUserId);
+  const primaryEmail = clerkUser.emailAddresses.find(
+    (address) =>
+      address.id === clerkUser.primaryEmailAddressId &&
+      address.verification?.status === "verified",
+  );
+  const verifiedEmail =
+    primaryEmail ??
+    clerkUser.emailAddresses.find(
+      (address) => address.verification?.status === "verified",
+    );
+
+  return {
+    email: verifiedEmail?.emailAddress,
+    firstName: clerkUser.firstName ?? undefined,
+    lastName: clerkUser.lastName ?? undefined,
+    username: clerkUser.username ?? undefined,
+  };
+}
+
 /**
  * Loads the application's local user for a Clerk session when one is present.
  * Migrated accounts use sessionClaims.userId; new accounts fall back to their
@@ -53,7 +74,17 @@ export async function resolveOptionalDbUser(req: Request): Promise<User | undefi
     return undefined;
   }
 
-  let [dbUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!req.clerkIdentity.email && auth.userId) {
+    req.clerkIdentity = {
+      ...req.clerkIdentity,
+      ...(await loadVerifiedClerkIdentity(auth.userId)),
+    };
+  }
+
+  let dbUser: User | undefined;
+  if (bridgeId) {
+    [dbUser] = await db.select().from(users).where(eq(users.id, bridgeId)).limit(1);
+  }
   const normalizedEmail = req.clerkIdentity.email?.toLowerCase();
   if (!dbUser && normalizedEmail) {
     [dbUser] = await db
@@ -61,6 +92,9 @@ export async function resolveOptionalDbUser(req: Request): Promise<User | undefi
       .from(users)
       .where(sql`lower(trim(${users.email})) = ${normalizedEmail}`)
       .limit(1);
+  }
+  if (!dbUser && auth.userId) {
+    [dbUser] = await db.select().from(users).where(eq(users.id, auth.userId)).limit(1);
   }
   if (!dbUser) {
     const [inserted] = await db
