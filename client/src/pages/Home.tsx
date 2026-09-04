@@ -16,6 +16,7 @@ import iconPrinting from "@assets/icon-printing.png";
 import iconPhotography from "@assets/icon-photography.png";
 import iconVideography from "@assets/icon-videography.png";
 import iconMarketing from "@assets/icon-marketing.png";
+import { ExpandableText } from "@/components/ExpandableText";
 
 const heroImages = [heroImage1, heroImage2];
 
@@ -394,7 +395,10 @@ export default function Home() {
                       </div>
                     </div>
                     <CardContent className="p-5">
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{promo.description}</p>
+                      <ExpandableText
+                        text={promo.description}
+                        className="text-sm text-muted-foreground mb-4"
+                      />
                       <Link href={`/quote?sourceType=promotion&sourceId=${promo.id}&selected=${encodeURIComponent(promo.title)}`}>
                         <Button variant="ghost" className="p-0 h-auto text-secondary hover:text-secondary/80 font-semibold group/btn">
                           Claim Offer
@@ -543,7 +547,10 @@ export default function Home() {
                       <CardContent className="p-5">
                         <Badge variant="secondary" className="mb-2 text-xs">{product.category}</Badge>
                         <h3 className="font-display font-semibold text-lg mb-1 group-hover:text-primary transition-colors">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{product.description}</p>
+                        <ExpandableText
+                          text={product.description}
+                          className="text-sm text-muted-foreground mb-3"
+                        />
                         <div className="flex items-center justify-between">
                           <span className="text-xl font-display font-bold text-primary">From R{product.basePrice}</span>
                           <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />

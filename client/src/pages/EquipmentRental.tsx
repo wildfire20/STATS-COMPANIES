@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Camera, Video, Lightbulb, Mic, Move3D, Package, Calendar, CheckCircle, Info } from "lucide-react";
 import type { Equipment } from "@shared/schema";
 import { format, differenceInDays, addDays } from "date-fns";
+import { ExpandableText } from "@/components/ExpandableText";
 
 const categories = [
   { id: "all", name: "All Equipment", icon: Package },
@@ -205,9 +206,10 @@ export default function EquipmentRental() {
                         </CardHeader>
                         <CardContent className="flex-1">
                           {item.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                              {item.description}
-                            </p>
+                            <ExpandableText
+                              text={item.description}
+                              className="text-sm text-muted-foreground mb-3"
+                            />
                           )}
                           <div className="flex items-center justify-between">
                             <div>

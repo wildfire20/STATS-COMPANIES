@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Camera, Video, Megaphone, CheckCircle, ArrowRight, Sparkles, Star, Printer } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Service, ServicePlan } from "@shared/schema";
+import { ExpandableText } from "@/components/ExpandableText";
 
 const serviceCategories = [
   { id: "all", name: "All Services", icon: null },
@@ -153,9 +154,10 @@ export default function Services() {
                                   </Badge>
                                 </div>
                               </div>
-                              <CardDescription className="mb-5 line-clamp-2">
-                                {service.description}
-                              </CardDescription>
+                              <ExpandableText
+                                text={service.description}
+                                className="mb-5 text-sm text-muted-foreground"
+                              />
                               {service.features && service.features.length > 0 && (
                                 <ul className="space-y-2">
                                   {service.features.slice(0, 4).map((feature, idx) => (
