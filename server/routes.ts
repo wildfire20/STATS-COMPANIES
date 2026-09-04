@@ -8,7 +8,6 @@ import { bookingDateTimeKey, companyNowBookingKey } from "@shared/bookingDateTim
 import { 
   insertBookingSchema, 
   insertQuoteRequestSchema, 
-  insertOrderSchema,
   insertProductSchema,
   insertServiceSchema,
   insertPromotionSchema,
@@ -511,9 +510,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.get("/api/bookings", async (req, res) => {
+  app.get("/api/bookings", isAuthenticated, async (req: any, res) => {
     try {
-      const bookings = await storage.getBookings();
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const bookings = await storage.getBookingsByUser(userId);
       res.json(bookings);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch bookings" });
@@ -555,32 +558,31 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/orders", async (req, res) => {
-    try {
-      const data = insertOrderSchema.parse(req.body);
-      const order = await storage.createOrder(data);
-      res.status(201).json(order);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid order data", details: error.errors });
-      }
-      res.status(500).json({ error: "Failed to create order" });
-    }
+  app.post("/api/orders", (_req, res) => {
+    res.status(404).json({ error: "Order creation is only available through checkout" });
   });
 
-  app.get("/api/orders", async (req, res) => {
+  app.get("/api/orders", isAuthenticated, async (req: any, res) => {
     try {
-      const orders = await storage.getOrders();
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const orders = await storage.getOrdersByUser(userId);
       res.json(orders);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch orders" });
     }
   });
 
-  app.get("/api/orders/:id", async (req, res) => {
+  app.get("/api/orders/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
       const order = await storage.getOrder(req.params.id);
-      if (!order) {
+      if (!order || (order.userId !== userId && req.dbUser?.role !== "admin")) {
         return res.status(404).json({ error: "Order not found" });
       }
       res.json(order);
@@ -2062,10 +2064,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.get("/api/equipment-rentals/:id", async (req, res) => {
+  app.get("/api/equipment-rentals/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getAuthenticatedUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
       const rental = await storage.getEquipmentRental(req.params.id);
-      if (!rental) {
+      if (!rental || (rental.userId !== userId && req.dbUser?.role !== "admin")) {
         return res.status(404).json({ error: "Rental not found" });
       }
       res.json(rental);
@@ -2077,21 +2083,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.post("/api/equipment-rentals", async (req: any, res) => {
     try {
+      const rentalDateSchema = z.string().trim().min(1).refine(
+        (value) => !Number.isNaN(new Date(value).getTime()),
+        "Invalid date",
+      ).transform((value) => new Date(value));
+      const rentalInput = z.object({
+        equipmentId: z.string().min(1),
+        customerName: z.string().trim().min(1),
+        customerEmail: z.string().trim().email(),
+        customerPhone: z.string().trim().min(1),
+        startDate: rentalDateSchema,
+        endDate: rentalDateSchema,
+        quantity: z.coerce.number().int().positive().default(1),
+        notes: z.string().optional(),
+      }).parse(req.body);
       const userId = getAuthenticatedUserId(req);
-      const equipment = await storage.getEquipmentById(req.body.equipmentId);
+      const equipment = await storage.getEquipmentById(rentalInput.equipmentId);
       if (!equipment) {
         return res.status(404).json({ error: "Equipment not found" });
       }
 
-      const startDate = new Date(req.body.startDate);
-      const endDate = new Date(req.body.endDate);
+      const startDate = rentalInput.startDate;
+      const endDate = rentalInput.endDate;
       const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       
       if (totalDays < 1) {
         return res.status(400).json({ error: "Rental must be at least 1 day" });
       }
 
-      const quantity = req.body.quantity || 1;
+      const quantity = rentalInput.quantity;
       if (quantity > (equipment.availableQuantity || 0)) {
         return res.status(400).json({ error: "Not enough equipment available" });
       }
@@ -2103,14 +2123,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const rentalNumber = `RNT-${Date.now()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
 
-      const rental = await storage.createEquipmentRental({
+      const rental = await storage.createEquipmentRentalWithInventory({
         rentalNumber,
         userId: userId || undefined,
         equipmentId: equipment.id,
         equipmentName: equipment.name,
-        customerName: req.body.customerName,
-        customerEmail: req.body.customerEmail,
-        customerPhone: req.body.customerPhone,
+        customerName: rentalInput.customerName,
+        customerEmail: rentalInput.customerEmail,
+        customerPhone: rentalInput.customerPhone,
         startDate,
         endDate,
         quantity,
@@ -2119,20 +2139,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         subtotal: subtotal.toFixed(2),
         deposit: deposit.toFixed(2),
         total: total.toFixed(2),
-        notes: req.body.notes,
+        notes: rentalInput.notes,
         status: "pending",
         paymentStatus: "pending",
       });
 
-      // Update available quantity
-      await storage.updateEquipment(equipment.id, {
-        availableQuantity: (equipment.availableQuantity || 0) - quantity,
-      });
-
       // Send confirmation email
       sendEquipmentRentalStatusEmail(
-        req.body.customerEmail,
-        req.body.customerName,
+        rentalInput.customerEmail,
+        rentalInput.customerName,
         equipment.name,
         rentalNumber,
         "pending",
@@ -2143,6 +2158,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       res.status(201).json(rental);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid rental data", details: error.errors });
+      }
+      if (error instanceof Error && error.message === "INSUFFICIENT_INVENTORY") {
+        return res.status(400).json({ error: "Not enough equipment available" });
+      }
       console.error("Error creating rental:", error);
       res.status(500).json({ error: "Failed to create rental request" });
     }

@@ -259,10 +259,19 @@ export function Footer() {
             <p className="text-sm text-white/50">
               &copy; {new Date().getFullYear()} STATS Companies. All rights reserved.
             </p>
-            <div className="flex flex-wrap justify-center gap-6 text-sm">
+            <div className="flex flex-wrap justify-center items-center gap-6 text-sm">
               <Link href="/privacy-policy" className="text-white/50 hover:text-white transition-colors">Privacy Policy</Link>
               <Link href="/terms-of-service" className="text-white/50 hover:text-white transition-colors">Terms of Service</Link>
               <Link href="/refunds" className="text-white/50 hover:text-white transition-colors">Refund Policy</Link>
+              <a
+                href="https://www.auto-m8.co.za/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white/50 hover:text-white transition-colors"
+                data-testid="link-powered-by-autom8"
+              >
+                Powered by AutoM8
+              </a>
             </div>
           </div>
         </div>

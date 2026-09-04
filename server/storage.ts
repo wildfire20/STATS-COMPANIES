@@ -164,6 +164,7 @@ export interface IStorage {
   getEquipmentRental(id: string): Promise<EquipmentRental | undefined>;
   getEquipmentRentalsByUser(userId: string): Promise<EquipmentRental[]>;
   createEquipmentRental(rental: InsertEquipmentRental): Promise<EquipmentRental>;
+  createEquipmentRentalWithInventory(rental: InsertEquipmentRental): Promise<EquipmentRental>;
   updateEquipmentRental(id: string, rental: Partial<InsertEquipmentRental>): Promise<EquipmentRental | undefined>;
   updateEquipmentRentalStatus(id: string, status: string, paymentStatus?: string): Promise<EquipmentRental | undefined>;
   deleteEquipmentRental(id: string): Promise<boolean>;
@@ -830,6 +831,29 @@ export class DatabaseStorage implements IStorage {
   async createEquipmentRental(rental: InsertEquipmentRental): Promise<EquipmentRental> {
     const [rentalItem] = await db.insert(equipmentRentals).values(rental).returning();
     return rentalItem;
+  }
+
+  async createEquipmentRentalWithInventory(rental: InsertEquipmentRental): Promise<EquipmentRental> {
+    return db.transaction(async (tx) => {
+      const [reservedEquipment] = await tx
+        .update(equipment)
+        .set({
+          availableQuantity: sql`${equipment.availableQuantity} - ${rental.quantity}`,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(equipment.id, rental.equipmentId),
+          sql`${equipment.availableQuantity} >= ${rental.quantity}`,
+        ))
+        .returning({ id: equipment.id });
+
+      if (!reservedEquipment) {
+        throw new Error("INSUFFICIENT_INVENTORY");
+      }
+
+      const [rentalItem] = await tx.insert(equipmentRentals).values(rental).returning();
+      return rentalItem;
+    });
   }
 
   async updateEquipmentRental(id: string, updates: Partial<InsertEquipmentRental>): Promise<EquipmentRental | undefined> {
