@@ -47,6 +47,7 @@ export default function Checkout() {
   
   const [step, setStep] = useState<CheckoutStep>("details");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery">("pickup");
   const [paymentMethod, setPaymentMethod] = useState<string>("bank_transfer");
   const [notes, setNotes] = useState("");
   const [lineDetails, setLineDetails] = useState<Record<string, { instructions: string; file?: File; artworkUrl?: string | null; artworkName?: string | null }>>({});
@@ -125,7 +126,8 @@ export default function Checkout() {
   const checkoutMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/orders/checkout", {
-        addressId: selectedAddressId,
+        addressId: deliveryMethod === "delivery" ? selectedAddressId : undefined,
+        deliveryMethod,
         paymentMethod,
         notes,
       });
@@ -298,14 +300,37 @@ export default function Checkout() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <MapPin className="h-5 w-5" />
-                      Delivery Address
+                      Collection Method
                     </CardTitle>
                     <CardDescription>
-                      Select where you'd like your order delivered
+                      Choose pickup or delivery for your order
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {addressesLoading ? (
+                    <RadioGroup
+                      value={deliveryMethod}
+                      onValueChange={(value) => setDeliveryMethod(value as "pickup" | "delivery")}
+                      className="grid gap-3 sm:grid-cols-2"
+                    >
+                      <Label htmlFor="pickup" className="flex cursor-pointer items-center gap-3 rounded-lg border p-4">
+                        <RadioGroupItem value="pickup" id="pickup" />
+                        <Package className="h-5 w-5" />
+                        <span className="font-medium">Pickup</span>
+                      </Label>
+                      <Label htmlFor="delivery" className="flex cursor-pointer items-center gap-3 rounded-lg border p-4">
+                        <RadioGroupItem value="delivery" id="delivery" />
+                        <Truck className="h-5 w-5" />
+                        <span className="font-medium">Delivery</span>
+                      </Label>
+                    </RadioGroup>
+
+                    {deliveryMethod === "delivery" && (
+                      <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                        Delivery is not free. Our team will contact you to confirm the delivery arrangements and communicate the applicable delivery fee.
+                      </div>
+                    )}
+
+                    {deliveryMethod === "delivery" && (addressesLoading ? (
                       <div className="space-y-3">
                         {[1, 2].map(i => (
                           <Skeleton key={i} className="h-24 w-full" />
@@ -357,12 +382,12 @@ export default function Checkout() {
                           </Button>
                         </Link>
                       </div>
-                    )}
+                    ))}
 
                     <div className="flex justify-end pt-4">
                       <Button 
                         onClick={() => setStep("payment")}
-                        disabled={!selectedAddressId}
+                        disabled={deliveryMethod === "delivery" && !selectedAddressId}
                         className="rounded-full px-8"
                         data-testid="button-continue-payment"
                       >
@@ -691,8 +716,8 @@ export default function Checkout() {
                     <span data-testid="text-tax">{formatPrice(tax)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span className="text-sm text-green-600">Free</span>
+                    <span className="text-muted-foreground">{deliveryMethod === "delivery" ? "Delivery" : "Pickup"}</span>
+                    <span className="text-sm">{deliveryMethod === "delivery" ? "Fee to be confirmed" : "No charge"}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold">

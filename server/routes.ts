@@ -1847,7 +1847,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(401).json({ error: "Authentication required for checkout" });
       }
 
-      const { addressId, paymentMethod, notes } = req.body;
+      const { addressId, deliveryMethod, paymentMethod, notes } = req.body;
+      if (!["pickup", "delivery"].includes(deliveryMethod)) {
+        return res.status(400).json({ error: "Please choose pickup or delivery" });
+      }
 
       const cartItems = await storage.getCartItems(userId);
       if (cartItems.length === 0) {
@@ -1874,6 +1877,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ error: "Add a valid phone number to your profile before placing an order" });
       }
       const address = addressId ? await storage.getAddress(addressId) : null;
+      if (deliveryMethod === "delivery" && !addressId) {
+        return res.status(400).json({ error: "Please select a delivery address" });
+      }
       if (addressId && (!address || address.userId !== userId)) {
         return res.status(400).json({ error: "Please select one of your saved delivery addresses" });
       }
@@ -1906,8 +1912,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         total: total.toFixed(2),
         status: "pending",
         paymentStatus: "pending",
-        deliveryMethod: paymentMethod === "pay_on_delivery" ? "delivery" : (address ? "delivery" : "pickup"),
+        deliveryMethod,
         deliveryAddress,
+        pickupLocation: deliveryMethod === "pickup" ? "STATS COMPANIES, Pretoria" : undefined,
         customerName,
         customerEmail,
         customerPhone: savedPhone,

@@ -56,18 +56,10 @@ const clerkAppearance = {
   variables: { colorPrimary: "#1e3a5f", colorForeground: "#0f172a", colorMutedForeground: "#475569", colorDanger: "#dc2626", colorBackground: "#ffffff", colorInput: "#f8fafc", colorInputForeground: "#0f172a", colorNeutral: "#cbd5e1", fontFamily: "Inter, sans-serif", borderRadius: "0.75rem" },
   elements: { rootBox: "w-full flex justify-center", cardBox: "bg-white rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl", card: "!shadow-none !border-0 !bg-transparent !rounded-none", footer: "!shadow-none !border-0 !bg-transparent !rounded-none", headerTitle: "text-slate-900", headerSubtitle: "text-slate-600", socialButtonsBlockButtonText: "text-slate-700", formFieldLabel: "text-slate-700", footerActionLink: "text-primary", footerActionText: "text-slate-600", dividerText: "text-slate-500", identityPreviewEditButton: "text-primary", formFieldSuccessText: "text-emerald-700", alertText: "text-slate-700", logoBox: "mb-4", logoImage: "h-14 w-auto", socialButtonsBlockButton: "border-slate-200 hover:bg-slate-50", formButtonPrimary: "bg-primary hover:bg-primary/90", formFieldInput: "bg-slate-50 text-slate-900 border-slate-300", footerAction: "bg-slate-50", dividerLine: "bg-slate-200", alert: "bg-slate-50 border-slate-200", otpCodeFieldInput: "bg-slate-50 text-slate-900", formFieldRow: "gap-2", main: "gap-4" },
 };
-function SignInPage() { return <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>; }
+function SignInPage() { return <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} fallbackRedirectUrl={`${basePath}/`} /></div>; }
 function SignUpPage() { return <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>; }
 function HomeRedirect() {
-  const showPublicSite = new URLSearchParams(window.location.search).get("view") === "site";
-  if (showPublicSite) {
-    return <Home />;
-  }
-
-  return <>
-    <Show when="signed-in"><Redirect to="/dashboard" /></Show>
-    <Show when="signed-out"><Home /></Show>
-  </>;
+  return <Home />;
 }
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk(); const previous = useRef<string | null | undefined>(undefined);
