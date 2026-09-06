@@ -25,7 +25,11 @@ export function ExpandableText({
       <button
         type="button"
         className="mt-1 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm"
-        onClick={() => setExpanded((value) => !value)}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setExpanded((value) => !value);
+        }}
         aria-expanded={expanded}
       >
         {expanded ? "Show less" : "Read more"}

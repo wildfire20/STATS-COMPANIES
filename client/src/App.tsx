@@ -62,6 +62,13 @@ function SignUpPage() { return <div className="flex min-h-[100dvh] items-center 
 function HomeRedirect() {
   return <Home />;
 }
+function ScrollToTop() {
+  const [location] = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location]);
+  return null;
+}
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk(); const previous = useRef<string | null | undefined>(undefined);
   useEffect(() => addListener(({ user }) => { const id = user?.id ?? null; if (previous.current !== undefined && previous.current !== id) queryClient.clear(); previous.current = id; }), [addListener]);
@@ -83,5 +90,5 @@ function ClerkProviderWithRoutes() {
   return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: "Welcome back", subtitle: "Sign in to access your account" } }, signUp: { start: { title: "Create your account", subtitle: "Get started today" } } }} routerPush={(to) => setLocation(stripBase(to))} routerReplace={(to) => setLocation(stripBase(to), { replace: true })}><QueryClientProvider client={queryClient}><ClerkQueryClientCacheInvalidator /><TooltipProvider><CartProvider><AppRoutes /><CartDrawer /><WhatsAppButton /><Toaster /></CartProvider></TooltipProvider></QueryClientProvider></ClerkProvider>;
 }
 export default function App() {
-  return <WouterRouter base={basePath}><ClerkProviderWithRoutes /></WouterRouter>;
+  return <WouterRouter base={basePath}><ScrollToTop /><ClerkProviderWithRoutes /></WouterRouter>;
 }
