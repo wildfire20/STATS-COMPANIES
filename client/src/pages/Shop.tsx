@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Printer, Search, ShoppingCart, ChevronRight, ArrowRight, Sparkles, Package, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Product } from "@shared/schema";
+import { ExpandableText } from "@/components/ExpandableText";
 
 const categories = [
   { id: "all", name: "All Products" },
@@ -224,7 +225,10 @@ export default function Shop() {
                           {product.name}
                         </motion.h3>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{product.description}</p>
+                      <ExpandableText
+                        text={product.description}
+                        className="text-sm text-muted-foreground mb-4"
+                      />
                       <div className="flex items-center justify-between pt-4 border-t border-border/50">
                         <div>
                           <span className="text-xs text-muted-foreground">From</span>
